@@ -31,6 +31,8 @@ class FrameSourceManager:
     def open(self, source_type: str, source_value: str) -> None:
         source_type = (source_type or "camera").strip().lower()
         source_value = (source_value or "0").strip() or "0"
+        self._source_type = source_type
+        self._source_value = source_value
         self.close()
 
         try:
@@ -47,8 +49,6 @@ class FrameSourceManager:
             self._last_error = str(exc)
             raise
 
-        self._source_type = source_type
-        self._source_value = source_value
         self._last_error = ""
         logger.info("Source switched to %s (%s)", self._source_type, self._source_value)
 

@@ -61,7 +61,7 @@ class CentroidTracker:
             else:
                 state.missed_frames += 1
                 if state.missed_frames > self.max_missed:
-                    if self._is_exit_point(state.centroid):
+                    if state.age_frames >= 2 or self._is_exit_point(state.centroid):
                         self._pending_exits += 1
                     del self._tracks[track_id]
 

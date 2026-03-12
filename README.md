@@ -1,42 +1,137 @@
 # Smart Traffic Management System for Urban Congestion
 
-This project is an interactive simulation of an urban traffic junction with adaptive signal control. It is designed as a capstone-style software prototype that demonstrates how live corridor pressure, queue length, wait time, vehicle-to-vehicle coordination, and emergency-priority handling can improve traffic flow.
+This repository now contains two layers of the capstone system:
 
-## Current Prototype
+1. The original HTML simulation for adaptive junction behavior and analytics.
+2. A new modular Python traffic-vision platform that works with live camera feeds, uploaded images, or uploaded videos and adds AI-generated suggestions with offline fallback.
 
-- Adaptive and fixed-cycle signal modes
-- Demand profiles for balanced flow, rush-hour bias, and event dispersal
-- Live congestion dashboard with wait time, throughput, and corridor pressure
-- Emergency vehicle dispatch for ambulance, police, fire and rescue, and disaster response
-- Optional random emergency-incident generation with a live enable/disable switch
-- Vehicle-to-vehicle communication that tells nearby traffic to yield or hold before the intersection
-- Vehicle-to-infrastructure preemption that lets the controller grant faster green access to emergency corridors
-- Emergency actions such as priority passage, intersection lockdown, rescue convoy, and evacuation wave
-- Built-in live analytics logging with automatic 1-second timeline samples, event logs, JSON/CSV export, and permanent browser-system storage
-- Additional controller constraints for queue override, starvation protection, spillback protection, and emergency preemption logging
-- Standalone `traffic-analytics.html` page for live traffic graphs over time, stored-session browsing, and offline JSON import for historical review
-- Optional OpenAI-powered AI advisor for traffic analysis, congestion forecasting, and signal-timing suggestions using a user-supplied API key
-- Canvas-based intersection simulation with vehicle movement and signal visualization
+## What Is New
+
+The Python system is designed around real traffic footage instead of only simulated vehicles. It keeps the main ideas from the HTML prototype, especially corridor pressure, adaptive intervention, and live analytics, but moves them into a backend that can process real frames and stream them to a live dashboard.
+
+Key additions:
+
+- Live traffic visualization from camera, image, or video
+- YOLO-based object detection with an OpenCV fallback detector
+- Mixed-traffic scoring tuned for Indian-road style scenes with motorcycles, buses, trucks, pedestrians, and general vehicle density
+- Corridor pressure estimation for north, east, south, and west sectors
+- Live AI suggestions from OpenAI when online
+- Offline fallback suggestions through local rules, with optional Ollama support
+- Modular error handling with `try/except` separation across source loading, detection, analytics, advisory, upload, and bootstrap stages
+- Auto-install flow for missing Python libraries
+- Windows PowerShell launcher that can also install Python and optionally FFmpeg on fresh machines
 
 ## Project Structure
 
-- `Simulation/simulation1.html`: self-contained traffic simulation and dashboard
-- `Simulation/traffic-analytics.html`: standalone live graph dashboard for timeline analytics
+- `Simulation/simulation1.html`: original self-contained traffic simulation and dashboard
+- `Simulation/traffic-analytics.html`: original standalone live graph dashboard for timeline analytics
+- `traffic_ai/config.py`: environment and runtime configuration
+- `traffic_ai/services/source_manager.py`: camera, image, and video ingestion
+- `traffic_ai/vision/detector.py`: YOLO detector plus OpenCV motion fallback
+- `traffic_ai/vision/tracker.py`: lightweight centroid tracking
+- `traffic_ai/services/analytics.py`: corridor pressure, congestion, throughput, and controller-note generation
+- `traffic_ai/services/advisors.py`: OpenAI, Ollama, and offline advisory chain
+- `traffic_ai/services/processor.py`: main live processing loop
+- `traffic_ai/web/app.py`: Flask dashboard server and API routes
+- `traffic_ai/web/templates/dashboard.html`: interactive HTML dashboard UI
+- `traffic_ai/web/static/`: dashboard JavaScript and CSS
+- `run_traffic_ai.py`: Python bootstrap launcher
+- `launch_traffic_ai.ps1`: Windows launcher that can install missing software
 
-## How to Run
+## Running The HTML Prototype
 
 Open `Simulation/simulation1.html` in a modern browser.
 
 To view graphs over time, open `Simulation/traffic-analytics.html` in the same browser while the simulation is running. The graph page reads the live analytics feed every second, can load permanently stored sessions from browser storage, and can also import exported JSON logs.
 
-To use the optional AI advisor, enable the OpenAI section inside `simulation1.html`, choose a model, and provide your own API key. The demo keeps the key out of the analytics logs and exports. Because this prototype is a static browser application, the AI call is made directly from the browser for demonstration purposes; a backend relay is recommended for production use.
+## Running The Python Traffic AI System
 
-## Capstone Scope
+### Fastest Windows Start
 
-The current version focuses on a single intelligent junction. It can be extended into a larger smart traffic platform by adding:
+From PowerShell:
 
-- multi-junction coordination
-- camera or sensor data ingestion
-- route optimization for emergency vehicles
-- historical congestion analytics
-- web or mobile operator dashboards
+```powershell
+.\launch_traffic_ai.ps1
+```
+
+Examples:
+
+```powershell
+.\launch_traffic_ai.ps1 -SourceType camera -SourceValue 0
+.\launch_traffic_ai.ps1 -SourceType video -SourceValue "D:\traffic\junction.mp4"
+.\launch_traffic_ai.ps1 -SourceType image -SourceValue "D:\traffic\frame.jpg"
+.\launch_traffic_ai.ps1 -InstallSystemTools
+```
+
+The PowerShell launcher will:
+
+- try to find Python
+- install Python with `winget` if it is missing
+- optionally install FFmpeg when `-InstallSystemTools` is used
+- start the Python dashboard launcher
+
+### Python Launch
+
+If Python is already installed:
+
+```powershell
+python .\run_traffic_ai.py --source-type camera --source-value 0
+```
+
+The bootstrap script installs any missing Python packages from `requirements.txt` before starting Flask.
+
+After launch, open the HTML dashboard in your browser:
+
+```text
+http://127.0.0.1:8501/dashboard
+```
+
+The dashboard lets you:
+
+- watch the live annotated traffic stream
+- switch camera, image, and video sources
+- upload traffic media directly from the browser
+- monitor corridor pressure, congestion, throughput, and mobility
+- view live AI suggestions and offline fallback alerts
+
+## OpenAI And Offline Mode
+
+The AI advisory chain runs in this order:
+
+1. OpenAI
+2. Ollama if configured
+3. Offline rule-based traffic advisor
+
+This means the dashboard keeps working even during internet or API failures. The vision pipeline also stays local after the detector weights are available.
+
+Create a `.env` file from `.env.example` if you want to set your OpenAI key or adjust models:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Important environment variables:
+
+- `OPENAI_API_KEY`: required for cloud suggestions
+- `OPENAI_MODEL`: default is `gpt-4o-mini`
+- `OLLAMA_ENABLED`: set to `true` to use a local LLM fallback
+- `VISION_MODEL_PATH`: default is `yolov8n.pt`, but you can replace it with a custom Indian-traffic model
+
+## Notes On Indian Traffic Scenes
+
+The current analytics layer is tuned for mixed urban traffic and gives special weight to:
+
+- two-wheelers
+- buses and trucks
+- pedestrian spillover
+- corridor crowding and low movement
+
+For higher-quality recognition of Indian-specific categories such as auto-rickshaws, replace `VISION_MODEL_PATH` with a custom fine-tuned YOLO model trained on Indian-road datasets.
+
+## Capstone Extension Ideas
+
+- Custom-trained detection weights for auto-rickshaws, tractors, lane violations, and helmet compliance
+- Multi-junction coordination with shared analytics
+- Emergency vehicle route prioritization across multiple corridors
+- Long-term reporting dashboards and incident replay
+- Integration with municipal sensors, edge devices, or mobile operator tools

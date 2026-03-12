@@ -35,8 +35,10 @@ def create_app(config: AppConfig) -> Flask:
     app.config["TRAFFIC_RUNTIME_CONFIG"] = config
 
     @app.get("/")
-    def index() -> str:
-        return render_template("index.html", config=config)
+    @app.get("/dashboard")
+    @app.get("/dashboard.html")
+    def dashboard() -> str:
+        return render_template("dashboard.html", config=config)
 
     @app.get("/video_feed")
     def video_feed() -> Response:

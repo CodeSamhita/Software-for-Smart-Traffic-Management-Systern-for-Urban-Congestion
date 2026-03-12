@@ -10,7 +10,7 @@ import time
 import numpy as np
 
 from traffic_ai.config import AppConfig
-from traffic_ai.models import SuggestionPacket, TrafficSnapshot
+from traffic_ai.models import Detection, SuggestionPacket, TrafficSnapshot
 from traffic_ai.services.advisors import AdvisoryOrchestrator, OllamaAdvisor, OpenAIAdvisor, RuleBasedAdvisor
 from traffic_ai.services.analytics import TrafficAnalyticsEngine
 from traffic_ai.services.source_manager import FrameSourceManager
@@ -129,7 +129,7 @@ class TrafficProcessor:
                     vision_backend=self.detector.name,
                     suggestion_packet=self._suggestions,
                 )
-                annotated = self._annotate_frame(frame, snapshot)
+                annotated = self._annotate_frame(frame, snapshot, detections)
                 self._store(annotated, snapshot)
                 self._maybe_refresh_advice(snapshot, raw_frame)
             except Exception as exc:
@@ -221,7 +221,12 @@ class TrafficProcessor:
         self._last_frame_timestamp = now
         return sum(self._fps_samples) / len(self._fps_samples)
 
-    def _annotate_frame(self, frame: np.ndarray, snapshot: TrafficSnapshot) -> np.ndarray:
+    def _annotate_frame(
+        self,
+        frame: np.ndarray,
+        snapshot: TrafficSnapshot,
+        detections: list[Detection],
+    ) -> np.ndarray:
         height, width = frame.shape[:2]
         overlay = frame.copy()
         self.cv2.rectangle(overlay, (0, 0), (width, 96), (6, 20, 30), -1)
@@ -242,6 +247,42 @@ class TrafficProcessor:
             "south": (24, height - 28),
             "west": (width - 250, height - 28),
         }
+        detection_colors = {
+            "car": (224, 231, 255),
+            "motorcycle": (56, 189, 248),
+            "bicycle": (45, 212, 191),
+            "bus": (249, 115, 22),
+            "truck": (248, 113, 113),
+            "person": (244, 114, 182),
+            "vehicle": (203, 213, 225),
+            "tractor": (251, 191, 36),
+            "auto-rickshaw": (167, 139, 250),
+        }
+
+        for detection in detections[:48]:
+            color = detection_colors.get(getattr(detection, "label", "vehicle"), (203, 213, 225))
+            x1 = int(getattr(detection, "x1"))
+            y1 = int(getattr(detection, "y1"))
+            x2 = int(getattr(detection, "x2"))
+            y2 = int(getattr(detection, "y2"))
+            label = getattr(detection, "label", "vehicle")
+            confidence = float(getattr(detection, "confidence", 0.0))
+            track_id = getattr(detection, "track_id", None)
+            label_text = f"{label} {confidence:.2f}"
+            if track_id is not None:
+                label_text = f"#{track_id} {label_text}"
+
+            self.cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+            self.cv2.putText(
+                frame,
+                label_text[:36],
+                (x1, max(20, y1 - 10)),
+                self.cv2.FONT_HERSHEY_SIMPLEX,
+                0.45,
+                color,
+                2,
+                self.cv2.LINE_AA,
+            )
 
         for name, corridor in snapshot.corridors.items():
             color = corridor_colors[name]
