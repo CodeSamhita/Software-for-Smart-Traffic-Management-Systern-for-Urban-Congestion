@@ -8,11 +8,14 @@ This project is an interactive simulation of an urban traffic junction with adap
 - Demand profiles for balanced flow, rush-hour bias, and event dispersal
 - Live congestion dashboard with wait time, throughput, and corridor pressure
 - Emergency vehicle dispatch for ambulance, police, fire and rescue, and disaster response
+- Optional random emergency-incident generation with a live enable/disable switch
 - Vehicle-to-vehicle communication that tells nearby traffic to yield or hold before the intersection
 - Vehicle-to-infrastructure preemption that lets the controller grant faster green access to emergency corridors
 - Emergency actions such as priority passage, intersection lockdown, rescue convoy, and evacuation wave
-- Built-in live analytics logging with automatic 1-second timeline samples, event logs, and JSON/CSV export
-- Standalone `traffic-analytics.html` page for live traffic graphs over time, plus offline JSON import for historical review
+- Built-in live analytics logging with automatic 1-second timeline samples, event logs, JSON/CSV export, and permanent browser-system storage
+- Additional controller constraints for queue override, starvation protection, spillback protection, and emergency preemption logging
+- Standalone `traffic-analytics.html` page for live traffic graphs over time, stored-session browsing, and offline JSON import for historical review
+- Optional OpenAI-powered AI advisor for traffic analysis, congestion forecasting, and signal-timing suggestions using a user-supplied API key
 - Canvas-based intersection simulation with vehicle movement and signal visualization
 
 ## Project Structure
@@ -24,7 +27,9 @@ This project is an interactive simulation of an urban traffic junction with adap
 
 Open `Simulation/simulation1.html` in a modern browser.
 
-To view graphs over time, open `Simulation/traffic-analytics.html` in the same browser while the simulation is running. The graph page reads the live analytics feed every second and can also import exported JSON logs.
+To view graphs over time, open `Simulation/traffic-analytics.html` in the same browser while the simulation is running. The graph page reads the live analytics feed every second, can load permanently stored sessions from browser storage, and can also import exported JSON logs.
+
+To use the optional AI advisor, enable the OpenAI section inside `simulation1.html`, choose a model, and provide your own API key. The demo keeps the key out of the analytics logs and exports. Because this prototype is a static browser application, the AI call is made directly from the browser for demonstration purposes; a backend relay is recommended for production use.
 
 ## Capstone Scope
 

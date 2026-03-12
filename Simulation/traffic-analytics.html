@@ -61,6 +61,27 @@
             backdrop-filter: blur(18px);
         }
 
+        .floating-copyright {
+            position: fixed;
+            left: 50%;
+            bottom: 14px;
+            transform: translateX(-50%);
+            z-index: 5;
+            padding: 9px 14px;
+            border-radius: 999px;
+            background: rgba(8, 20, 30, 0.72);
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            backdrop-filter: blur(14px);
+            color: #cbd5e1;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            text-align: center;
+            pointer-events: none;
+            box-shadow: 0 14px 28px rgba(2, 8, 23, 0.24);
+        }
+
         .hero {
             padding: 22px;
             margin-bottom: 18px;
@@ -257,6 +278,86 @@
             letter-spacing: 0.09em;
             text-transform: uppercase;
             color: var(--muted);
+        }
+
+        .title-cluster {
+            display: grid;
+            gap: 5px;
+        }
+
+        .heading-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .info-wrap {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            flex: 0 0 auto;
+        }
+
+        .info-button {
+            width: 28px;
+            min-width: 28px;
+            height: 28px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            background: rgba(15, 23, 42, 0.92);
+            color: #c4f0ff;
+            font-size: 13px;
+            font-weight: 900;
+            line-height: 1;
+            cursor: help;
+            box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.06);
+        }
+
+        .info-button:hover,
+        .info-button:focus-visible {
+            background: rgba(30, 41, 59, 0.98);
+            border-color: rgba(56, 189, 248, 0.28);
+        }
+
+        .info-panel {
+            position: absolute;
+            top: calc(100% + 10px);
+            left: 0;
+            z-index: 4;
+            width: min(300px, calc(100vw - 72px));
+            padding: 12px 13px;
+            border-radius: 16px;
+            background: rgba(6, 16, 24, 0.98);
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            box-shadow: 0 20px 40px rgba(2, 8, 23, 0.42);
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.5;
+            opacity: 0;
+            transform: translateY(-4px);
+            pointer-events: none;
+            transition: opacity 0.18s ease, transform 0.18s ease;
+        }
+
+        .info-panel strong {
+            display: block;
+            margin-bottom: 4px;
+            color: #eff6ff;
+            font-size: 12px;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .info-wrap:hover .info-panel,
+        .info-wrap.open .info-panel,
+        .info-wrap:focus-within .info-panel {
+            opacity: 1;
+            transform: translateY(0);
         }
 
         .chart-stat {
@@ -484,6 +585,18 @@
                             <option value="all">All samples</option>
                         </select>
                     </div>
+                    <div class="toolbar-meta">
+                        <div>
+                            <strong>Stored Sessions</strong>
+                            <span id="session-copy">Load permanent logs saved in browser storage.</span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; width: min(390px, 100%);">
+                            <select id="session-select" aria-label="Choose a stored analytics session">
+                                <option value="">Latest stored session</option>
+                            </select>
+                            <button id="btn-stored" class="secondary" style="width: auto; min-width: 124px;">Open Stored</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -526,9 +639,18 @@
                 <div class="charts-grid">
                     <article class="card chart-card">
                         <div class="card-head">
-                            <div>
+                            <div class="title-cluster">
                                 <div class="card-kicker">Traffic Load</div>
-                                <h2>Live Vehicles</h2>
+                                <div class="heading-row">
+                                    <h2>Live Vehicles</h2>
+                                    <div class="info-wrap">
+                                        <button type="button" class="info-button" aria-label="About Live Vehicles graph">i</button>
+                                        <div class="info-panel">
+                                            <strong>Live Vehicles</strong>
+                                            Shows how many vehicles are currently inside the modeled road network. Rising values usually mean traffic is entering faster than the junction can clear it.
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             <div class="chart-stat">
                                 <div id="value-live" class="chart-value">0</div>
@@ -540,9 +662,18 @@
 
                     <article class="card chart-card">
                         <div class="card-head">
-                            <div>
+                            <div class="title-cluster">
                                 <div class="card-kicker">Congestion Signal</div>
-                                <h2>Congestion Index</h2>
+                                <div class="heading-row">
+                                    <h2>Congestion Index</h2>
+                                    <div class="info-wrap">
+                                        <button type="button" class="info-button" aria-label="About Congestion Index graph">i</button>
+                                        <div class="info-panel">
+                                            <strong>Congestion Index</strong>
+                                            This is a blended stress score built from queue size, delay, speed, and live vehicle load. It gives one quick headline number for overall network pressure.
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             <div class="chart-stat">
                                 <div id="value-congestion" class="chart-value">0</div>
@@ -554,9 +685,18 @@
 
                     <article class="card chart-card">
                         <div class="card-head">
-                            <div>
+                            <div class="title-cluster">
                                 <div class="card-kicker">Delay Tracking</div>
-                                <h2>Average Wait</h2>
+                                <div class="heading-row">
+                                    <h2>Average Wait</h2>
+                                    <div class="info-wrap">
+                                        <button type="button" class="info-button" aria-label="About Average Wait graph">i</button>
+                                        <div class="info-panel">
+                                            <strong>Average Wait</strong>
+                                            Tracks mean delay for vehicles approaching the junction. It helps show whether signal decisions are reducing stop-and-go waiting or causing longer queues to build.
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             <div class="chart-stat">
                                 <div id="value-wait" class="chart-value">0.0 s</div>
@@ -568,9 +708,18 @@
 
                     <article class="card chart-card">
                         <div class="card-head">
-                            <div>
+                            <div class="title-cluster">
                                 <div class="card-kicker">Service Rate</div>
-                                <h2>Throughput Per Minute</h2>
+                                <div class="heading-row">
+                                    <h2>Throughput Per Minute</h2>
+                                    <div class="info-wrap">
+                                        <button type="button" class="info-button" aria-label="About Throughput Per Minute graph">i</button>
+                                        <div class="info-panel">
+                                            <strong>Throughput Per Minute</strong>
+                                            Counts completed trips leaving the model over the last minute. Higher throughput with stable wait time usually means the controller is serving traffic efficiently.
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                             <div class="chart-stat">
                                 <div id="value-throughput" class="chart-value">0</div>
@@ -583,9 +732,18 @@
 
                 <article class="card wide-card">
                     <div class="card-head">
-                        <div>
+                        <div class="title-cluster">
                             <div class="card-kicker">Corridor Pressure</div>
-                            <h2>Pressure Balance Across Approaches</h2>
+                            <div class="heading-row">
+                                <h2>Pressure Balance Across Approaches</h2>
+                                <div class="info-wrap">
+                                    <button type="button" class="info-button" aria-label="About Corridor Pressure graph">i</button>
+                                    <div class="info-panel">
+                                        <strong>Corridor Pressure</strong>
+                                        Each line is a corridor control-pressure score built from queue length, incoming demand, delay, and emergency priority. The adaptive controller uses this pressure to help choose which direction should be served next.
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="chart-stat">
                             <div id="value-pressure" class="chart-value">0</div>
@@ -605,9 +763,18 @@
             <div class="side-column">
                 <article class="card">
                     <div class="card-head">
-                        <div>
+                        <div class="title-cluster">
                             <div class="card-kicker">Live Snapshot</div>
-                            <h2>Control Insights</h2>
+                            <div class="heading-row">
+                                <h2>Control Insights</h2>
+                                <div class="info-wrap">
+                                    <button type="button" class="info-button" aria-label="About Control Insights panel">i</button>
+                                    <div class="info-panel">
+                                        <strong>Control Insights</strong>
+                                        This panel summarizes the latest controller state, including active green direction, signal strategy, demand profile, and communication health across the network.
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div id="snapshot-chip" class="chip">Waiting</div>
                     </div>
@@ -633,9 +800,18 @@
 
                 <article class="card">
                     <div class="card-head">
-                        <div>
+                        <div class="title-cluster">
                             <div class="card-kicker">Event Stream</div>
-                            <h2>Recent Controller Events</h2>
+                            <div class="heading-row">
+                                <h2>Recent Controller Events</h2>
+                                <div class="info-wrap">
+                                    <button type="button" class="info-button" aria-label="About Recent Controller Events panel">i</button>
+                                    <div class="info-panel">
+                                        <strong>Recent Events</strong>
+                                        Shows the latest logged signal changes, emergency actions, exports, and operator interactions. It helps explain why the charts changed at specific moments in time.
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div id="event-chip" class="chip">Live</div>
                     </div>
@@ -644,13 +820,21 @@
             </div>
         </section>
     </div>
+    <div class="floating-copyright">(c) 2026 Smart Traffic Management System | Aditya Sharma | Urban Congestion Demo</div>
     <script>
         const STORAGE_KEY = "smart-traffic-analytics-feed.v1";
+        const ANALYTICS_DB_NAME = "smart-traffic-analytics-db";
+        const ANALYTICS_DB_VERSION = 1;
+        const ANALYTICS_SESSION_STORE = "sessions";
+        const ANALYTICS_SAMPLE_STORE = "samples";
+        const ANALYTICS_EVENT_STORE = "events";
         const appState = {
             sourceMode: "live",
             payload: null,
             importName: "",
-            loadError: ""
+            loadError: "",
+            sessionSummaries: [],
+            selectedSessionId: ""
         };
 
         const chartDefinitions = [
@@ -730,6 +914,8 @@
                     sourcePage: meta.sourcePage || "simulation1.html",
                     updatedAtIso: meta.updatedAtIso || "",
                     updatedAtMs: safeNumber(meta.updatedAtMs),
+                    sessionId: meta.sessionId || "",
+                    sessionStartedAtIso: meta.sessionStartedAtIso || "",
                     simTimeSec: safeNumber(meta.simTimeSec),
                     sampleIntervalMs: safeNumber(meta.sampleIntervalMs) || 1000,
                     controlMode: meta.controlMode || "",
@@ -737,9 +923,14 @@
                     signalPhase: meta.signalPhase || "",
                     activeGreen: meta.activeGreen || "",
                     nextCandidate: meta.nextCandidate || "",
+                    controllerTargetGreenMs: safeNumber(meta.controllerTargetGreenMs),
+                    controllerAutoBaseGreenMs: safeNumber(meta.controllerAutoBaseGreenMs),
+                    controllerCycleMultiplier: safeNumber(meta.controllerCycleMultiplier),
+                    controllerCongestionBand: meta.controllerCongestionBand || "",
                     priorityDirection: meta.priorityDirection || "",
                     emergencyType: meta.emergencyType || "",
                     emergencyAction: meta.emergencyAction || "",
+                    storageStatus: meta.storageStatus || "",
                     note: meta.note || ""
                 },
                 snapshot: {
@@ -752,11 +943,151 @@
                     emergencyTrips: safeNumber(snapshot.emergencyTrips),
                     v2vLinks: safeNumber(snapshot.v2vLinks),
                     yieldingVehicles: safeNumber(snapshot.yieldingVehicles),
-                    broadcasts: safeNumber(snapshot.broadcasts)
+                    broadcasts: safeNumber(snapshot.broadcasts),
+                    storedSampleCount: safeNumber(snapshot.storedSampleCount),
+                    storedEventCount: safeNumber(snapshot.storedEventCount)
                 },
                 timeline,
                 events
             };
+        }
+
+        function openAnalyticsDatabase() {
+            return new Promise((resolve, reject) => {
+                if (!("indexedDB" in window)) {
+                    reject(new Error("IndexedDB is unavailable in this browser."));
+                    return;
+                }
+                const request = window.indexedDB.open(ANALYTICS_DB_NAME, ANALYTICS_DB_VERSION);
+                request.onupgradeneeded = event => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(ANALYTICS_SESSION_STORE)) {
+                        const sessionStore = db.createObjectStore(ANALYTICS_SESSION_STORE, { keyPath: "id" });
+                        sessionStore.createIndex("updatedAtMs", "updatedAtMs", { unique: false });
+                    }
+                    if (!db.objectStoreNames.contains(ANALYTICS_SAMPLE_STORE)) {
+                        const sampleStore = db.createObjectStore(ANALYTICS_SAMPLE_STORE, { keyPath: "id" });
+                        sampleStore.createIndex("sessionId", "sessionId", { unique: false });
+                        sampleStore.createIndex("sequence", "sequence", { unique: false });
+                    }
+                    if (!db.objectStoreNames.contains(ANALYTICS_EVENT_STORE)) {
+                        const eventStore = db.createObjectStore(ANALYTICS_EVENT_STORE, { keyPath: "id" });
+                        eventStore.createIndex("sessionId", "sessionId", { unique: false });
+                        eventStore.createIndex("sequence", "sequence", { unique: false });
+                    }
+                };
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error || new Error("Unable to open analytics archive."));
+            });
+        }
+
+        function requestToPromise(request) {
+            return new Promise((resolve, reject) => {
+                request.onsuccess = () => resolve(request.result);
+                request.onerror = () => reject(request.error || new Error("IndexedDB request failed."));
+            });
+        }
+
+        async function loadStoredSessionSummaries() {
+            try {
+                const db = await openAnalyticsDatabase();
+                const transaction = db.transaction(ANALYTICS_SESSION_STORE, "readonly");
+                const store = transaction.objectStore(ANALYTICS_SESSION_STORE);
+                const summaries = await requestToPromise(store.getAll());
+                appState.sessionSummaries = summaries
+                    .sort((a, b) => safeNumber(b.updatedAtMs) - safeNumber(a.updatedAtMs))
+                    .slice(0, 40);
+                renderStoredSessionOptions();
+            } catch (error) {
+                console.warn("Unable to read stored analytics sessions.", error);
+                appState.sessionSummaries = [];
+                renderStoredSessionOptions();
+            }
+        }
+
+        function renderStoredSessionOptions() {
+            const select = document.getElementById("session-select");
+            const currentValue = appState.selectedSessionId;
+            const options = ['<option value="">Latest stored session</option>'];
+            for (const session of appState.sessionSummaries) {
+                const label = `${formatClock(session.updatedAtMs)} | ${session.controlMode || "mode"} | ${session.demandProfile || "profile"} | ${safeNumber(session.storedSampleCount)} samples`;
+                options.push(`<option value="${escapeHtml(session.id)}">${escapeHtml(label)}</option>`);
+            }
+            select.innerHTML = options.join("");
+            if (currentValue && appState.sessionSummaries.some(session => session.id === currentValue)) {
+                select.value = currentValue;
+            }
+            document.getElementById("session-copy").textContent = appState.sessionSummaries.length
+                ? `${appState.sessionSummaries.length} stored sessions are available in permanent browser storage.`
+                : "No stored sessions have been archived yet.";
+        }
+
+        async function loadStoredSession(sessionId) {
+            try {
+                const db = await openAnalyticsDatabase();
+                const transaction = db.transaction(
+                    [ANALYTICS_SESSION_STORE, ANALYTICS_SAMPLE_STORE, ANALYTICS_EVENT_STORE],
+                    "readonly"
+                );
+                const sessionStore = transaction.objectStore(ANALYTICS_SESSION_STORE);
+                const sampleStore = transaction.objectStore(ANALYTICS_SAMPLE_STORE);
+                const eventStore = transaction.objectStore(ANALYTICS_EVENT_STORE);
+                const summary = sessionId
+                    ? await requestToPromise(sessionStore.get(sessionId))
+                    : appState.sessionSummaries[0];
+                if (!summary) {
+                    appState.loadError = "No stored analytics session is available yet.";
+                    render();
+                    return;
+                }
+
+                const selectedId = summary.id;
+                const samples = await requestToPromise(sampleStore.index("sessionId").getAll(selectedId));
+                const events = await requestToPromise(eventStore.index("sessionId").getAll(selectedId));
+                samples.sort((a, b) => safeNumber(a.sequence) - safeNumber(b.sequence));
+                events.sort((a, b) => safeNumber(a.sequence) - safeNumber(b.sequence));
+                const latestSample = samples.length ? samples[samples.length - 1].payload : {};
+
+                appState.selectedSessionId = selectedId;
+                appState.sourceMode = "stored";
+                appState.loadError = "";
+                appState.payload = normalizePayload({
+                    meta: {
+                        project: summary.project || "Smart Traffic Management System",
+                        sourcePage: "stored-session",
+                        updatedAtIso: summary.updatedAtIso || "",
+                        updatedAtMs: safeNumber(summary.updatedAtMs),
+                        sessionId: summary.id,
+                        sessionStartedAtIso: summary.sessionStartedAtIso || "",
+                        simTimeSec: safeNumber(latestSample.simTimeSec || summary.lastSimTimeSec),
+                        controlMode: summary.controlMode || "",
+                        demandProfile: summary.demandProfile || "",
+                        signalPhase: latestSample.controllerPhase || "",
+                        activeGreen: latestSample.activeGreen || "",
+                        nextCandidate: latestSample.nextCandidate || "",
+                        controllerTargetGreenMs: safeNumber(latestSample.constraintTargetGreenMs),
+                        controllerAutoBaseGreenMs: safeNumber(latestSample.autoBaseGreenMs),
+                        controllerCycleMultiplier: safeNumber(latestSample.autoCycleMultiplier),
+                        controllerCongestionBand: latestSample.autoCongestionBand || "",
+                        priorityDirection: latestSample.emergencyDirection || "",
+                        emergencyType: latestSample.emergencyType || "",
+                        emergencyAction: latestSample.emergencyAction || "",
+                        storageStatus: "Persistent archive",
+                        note: "Loaded from permanent browser analytics storage."
+                    },
+                    snapshot: {
+                        storedSampleCount: safeNumber(summary.storedSampleCount),
+                        storedEventCount: safeNumber(summary.storedEventCount)
+                    },
+                    timeline: samples.map(sample => sample.payload),
+                    events: events.map(event => event.payload)
+                });
+                render();
+            } catch (error) {
+                appState.loadError = "Unable to load the stored analytics session.";
+                console.warn("Unable to load stored analytics session.", error);
+                render();
+            }
         }
 
         function getWindowSeconds() {
@@ -906,12 +1237,19 @@
 
         function renderSummary(visibleSamples) {
             const payload = appState.payload;
-            const sourceText = appState.sourceMode === "import" ? "Imported" : "Live";
+            const sourceText =
+                appState.sourceMode === "import"
+                    ? "Imported"
+                    : appState.sourceMode === "stored"
+                        ? "Stored"
+                        : "Live";
             document.getElementById("summary-source").textContent = payload ? sourceText : "Waiting";
             document.getElementById("summary-source-sub").textContent = payload
                 ? appState.sourceMode === "import"
                     ? `Using ${appState.importName || "a JSON analytics file"}.`
-                    : "Reading the active simulation feed from browser storage."
+                    : appState.sourceMode === "stored"
+                        ? `Loaded from stored session ${payload.meta.sessionId || "archive"}.`
+                        : "Reading the active simulation feed from browser storage."
                 : appState.loadError || "Open the simulation page in the same browser to stream data.";
 
             document.getElementById("summary-updated").textContent = payload ? formatClock(payload.meta.updatedAtMs) : "--";
@@ -921,12 +1259,14 @@
 
             document.getElementById("summary-samples").textContent = String(visibleSamples.length);
             document.getElementById("summary-samples-sub").textContent = payload
-                ? `${payload.timeline.length} total samples are available in the feed.`
+                ? `${payload.timeline.length} total samples are available in the current source.`
                 : "Graph points will appear as the simulation runs.";
 
             document.getElementById("summary-events").textContent = payload ? String(payload.events.length) : "0";
             document.getElementById("summary-events-sub").textContent = payload
-                ? "Emergency handling, controller changes, and exports are recorded."
+                ? payload.meta.storageStatus
+                    ? `${payload.meta.storageStatus}. Emergency handling and controller changes are recorded.`
+                    : "Emergency handling, controller changes, and exports are recorded."
                 : "Event history appears after the first controller action.";
 
             document.getElementById("summary-controller").textContent = payload
@@ -998,15 +1338,22 @@
                 return;
             }
 
-            chip.textContent = appState.sourceMode === "import" ? "Imported" : "Live Feed";
-            chip.className = appState.sourceMode === "import" ? "chip import" : "chip";
+            chip.textContent =
+                appState.sourceMode === "import"
+                    ? "Imported"
+                    : appState.sourceMode === "stored"
+                        ? "Stored Session"
+                        : "Live Feed";
+            chip.className = appState.sourceMode === "import" || appState.sourceMode === "stored" ? "chip import" : "chip";
             eventChip.textContent = `${payload.events.length} Events`;
-            eventChip.className = appState.sourceMode === "import" ? "chip import" : "chip";
+            eventChip.className = appState.sourceMode === "import" || appState.sourceMode === "stored" ? "chip import" : "chip";
 
             document.getElementById("insight-green").textContent =
-                `${payload.meta.activeGreen || "--"} corridor, ${payload.meta.signalPhase || "--"} phase.`;
+                `${payload.meta.activeGreen || "--"} axis, ${payload.meta.signalPhase || "--"} phase.`;
             document.getElementById("insight-mode").textContent =
-                `${payload.meta.controlMode || "--"} control with next candidate ${payload.meta.nextCandidate || "--"}.`;
+                payload.meta.controlMode === "adaptive" && safeNumber(payload.meta.controllerTargetGreenMs) > 0
+                    ? `${payload.meta.controlMode} control with ${((payload.meta.controllerTargetGreenMs || 0) / 1000).toFixed(1)} s live target, ${((payload.meta.controllerAutoBaseGreenMs || 0) / 1000).toFixed(1)} s base, ${payload.meta.controllerCongestionBand || "low"} congestion band, and next candidate ${payload.meta.nextCandidate || "--"}.`
+                    : `${payload.meta.controlMode || "--"} control with next candidate ${payload.meta.nextCandidate || "--"}.`;
             document.getElementById("insight-demand").textContent =
                 `${payload.meta.demandProfile || "--"} profile, live vehicles ${Math.round(payload.snapshot.liveVehicles || 0)}, throughput ${Math.round(payload.snapshot.throughputPerMin || 0)}.`;
             document.getElementById("insight-network").textContent =
@@ -1062,12 +1409,34 @@
             render();
         }
 
+        function closeInfoPanels() {
+            document.querySelectorAll(".info-wrap.open").forEach(wrap => {
+                wrap.classList.remove("open");
+                const button = wrap.querySelector(".info-button");
+                if (button) {
+                    button.setAttribute("aria-expanded", "false");
+                }
+            });
+        }
+
         function bindUi() {
             document.getElementById("window-select").addEventListener("change", render);
-            document.getElementById("btn-refresh").addEventListener("click", refreshLiveFeed);
+            document.getElementById("btn-refresh").addEventListener("click", () => {
+                loadStoredSessionSummaries();
+                refreshLiveFeed();
+            });
             document.getElementById("btn-live").addEventListener("click", () => {
                 appState.sourceMode = "live";
                 refreshLiveFeed();
+            });
+            document.getElementById("btn-stored").addEventListener("click", () => {
+                loadStoredSession(appState.selectedSessionId || "");
+            });
+            document.getElementById("session-select").addEventListener("change", event => {
+                appState.selectedSessionId = event.target.value;
+                if (appState.sourceMode === "stored") {
+                    loadStoredSession(appState.selectedSessionId || "");
+                }
             });
             document.getElementById("file-input").addEventListener("change", event => {
                 const file = event.target.files && event.target.files[0];
@@ -1094,12 +1463,38 @@
                     refreshLiveFeed();
                 }
             });
+            document.querySelectorAll(".info-button").forEach(button => {
+                button.setAttribute("aria-expanded", "false");
+                button.addEventListener("click", event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const wrap = button.closest(".info-wrap");
+                    const willOpen = !wrap.classList.contains("open");
+                    closeInfoPanels();
+                    if (willOpen) {
+                        wrap.classList.add("open");
+                        button.setAttribute("aria-expanded", "true");
+                    }
+                });
+            });
+            document.addEventListener("click", event => {
+                if (!event.target.closest(".info-wrap")) {
+                    closeInfoPanels();
+                }
+            });
+            document.addEventListener("keydown", event => {
+                if (event.key === "Escape") {
+                    closeInfoPanels();
+                }
+            });
         }
 
         function init() {
             bindUi();
+            loadStoredSessionSummaries();
             refreshLiveFeed();
             window.setInterval(refreshLiveFeed, 1000);
+            window.setInterval(loadStoredSessionSummaries, 5000);
         }
 
         window.onload = init;
