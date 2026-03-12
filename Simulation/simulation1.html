@@ -3,877 +3,2088 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-Life Traffic Simulation</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Smart Traffic Management System</title>
     <style>
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #121212; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        canvas { display: block; }
-        
-        /* Custom scrollbar for control panel */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
-
-        .glass-panel {
-            background: rgba(17, 24, 39, 0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        :root {
+            color-scheme: dark;
+            --bg: #07131c;
+            --panel: rgba(7, 20, 30, 0.84);
+            --line: rgba(148, 163, 184, 0.14);
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --accent: #38bdf8;
+            --accent-2: #2dd4bf;
         }
 
-        input[type=range] {
-            -webkit-appearance: none;
+        * { box-sizing: border-box; }
+        html, body {
+            margin: 0;
+            height: 100%;
+            overflow: hidden;
+            font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top left, rgba(56, 189, 248, 0.12), transparent 28%),
+                radial-gradient(circle at bottom right, rgba(45, 212, 191, 0.1), transparent 30%),
+                linear-gradient(160deg, #041018 0%, #081724 52%, #07131c 100%);
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+            background-size: 48px 48px;
+            pointer-events: none;
+        }
+
+        canvas { display: block; width: 100vw; height: 100vh; }
+
+        .panel {
+            position: absolute;
+            top: 24px;
+            padding: 20px;
+            border-radius: 22px;
+            background: linear-gradient(180deg, var(--panel), rgba(10, 24, 36, 0.94));
+            border: 1px solid var(--line);
+            backdrop-filter: blur(18px);
+            box-shadow: 0 24px 60px rgba(2, 8, 23, 0.35);
+            overflow: auto;
+        }
+
+        #controls {
+            left: 24px;
+            width: min(370px, calc(100vw - 48px));
+            max-height: calc(100vh - 48px);
+        }
+
+        #metrics {
+            right: 24px;
+            width: min(330px, calc(100vw - 48px));
+            max-height: calc(100vh - 48px);
+        }
+
+        #banner {
+            position: absolute;
+            left: 50%;
+            top: 24px;
+            transform: translateX(-50%);
+            width: min(500px, calc(100vw - 96px));
+            padding: 14px 18px;
+            border-radius: 18px;
+            background: rgba(8, 20, 30, 0.74);
+            border: 1px solid var(--line);
+            backdrop-filter: blur(18px);
+            text-align: center;
+            pointer-events: none;
+        }
+
+        .eyebrow {
+            display: inline-flex;
+            padding: 7px 11px;
+            border-radius: 999px;
+            background: rgba(56, 189, 248, 0.14);
+            border: 1px solid rgba(56, 189, 248, 0.16);
+            color: #c4f0ff;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        h1 {
+            margin: 12px 0 10px;
+            font-size: 30px;
+            line-height: 1.04;
+            letter-spacing: -0.03em;
+        }
+
+        p { margin: 0; color: var(--muted); line-height: 1.5; }
+        .section-title {
+            margin: 18px 0 12px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #cbd5e1;
+        }
+
+        .card {
+            padding: 14px;
+            margin-bottom: 12px;
+            border-radius: 18px;
+            background: rgba(15, 23, 42, 0.46);
+            border: 1px solid rgba(148, 163, 184, 0.12);
+        }
+
+        .grid-2, .metric-grid, .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+        label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #dbeafe;
+        }
+
+        label span {
+            color: var(--accent-2);
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+        select, input[type="range"], button {
             width: 100%;
-            background: transparent;
+            outline: 0;
         }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 16px;
-            width: 16px;
+
+        select {
+            padding: 12px 13px;
+            border-radius: 14px;
+            border: 1px solid rgba(148, 163, 184, 0.14);
+            background: rgba(15, 23, 42, 0.82);
+            color: var(--text);
+        }
+
+        input[type="range"] {
+            appearance: none;
+            height: 6px;
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(56, 189, 248, 0.88), rgba(45, 212, 191, 0.8));
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
-            background: #3b82f6;
-            cursor: pointer;
-            margin-top: -6px;
-            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+            background: #f8fafc;
+            border: 2px solid rgba(56, 189, 248, 0.78);
+            box-shadow: 0 0 0 5px rgba(56, 189, 248, 0.16);
         }
-        input[type=range]::-webkit-slider-runnable-track {
-            width: 100%;
-            height: 4px;
-            cursor: pointer;
-            background: #374151;
-            border-radius: 2px;
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #f8fafc;
+            border: 2px solid rgba(56, 189, 248, 0.78);
+            box-shadow: 0 0 0 5px rgba(56, 189, 248, 0.16);
         }
-        input[type=range]:focus {
-            outline: none;
+
+        .button-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+        .button-row .full-span { grid-column: 1 / -1; }
+
+        button {
+            padding: 12px 14px;
+            border: 0;
+            border-radius: 14px;
+            color: #f8fafc;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .primary { background: linear-gradient(135deg, rgba(14, 165, 233, 0.92), rgba(45, 212, 191, 0.92)); }
+        .secondary { background: rgba(30, 41, 59, 0.96); border: 1px solid rgba(148, 163, 184, 0.15); }
+        .danger { background: linear-gradient(135deg, rgba(239, 68, 68, 0.92), rgba(248, 113, 113, 0.88)); }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 30px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(52, 211, 153, 0.14);
+            border: 1px solid rgba(52, 211, 153, 0.18);
+            color: #b8f7dd;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .pill.fixed {
+            background: rgba(251, 191, 36, 0.12);
+            border-color: rgba(251, 191, 36, 0.18);
+            color: #fde68a;
+        }
+
+        .status-label, .metric-label {
+            font-size: 11px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .status-value { margin-top: 4px; font-size: 15px; font-weight: 800; color: #eff6ff; }
+        .metric-value { margin-top: 7px; font-size: 24px; font-weight: 900; letter-spacing: -0.03em; }
+        .metric-sub { margin-top: 5px; font-size: 12px; color: var(--muted); }
+
+        .corridor {
+            padding: 12px;
+            margin-bottom: 12px;
+            border-radius: 16px;
+            background: rgba(15, 23, 42, 0.42);
+            border: 1px solid rgba(148, 163, 184, 0.12);
+        }
+
+        .corridor-head, .corridor-meta { display: flex; justify-content: space-between; gap: 8px; }
+        .corridor-head { margin-bottom: 8px; }
+        .corridor-name { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; }
+        .corridor-meta { margin-bottom: 8px; font-size: 12px; color: var(--muted); }
+        .bar { height: 10px; border-radius: 999px; background: rgba(51, 65, 85, 0.75); overflow: hidden; }
+        .bar-fill {
+            height: 100%;
+            width: 0;
+            border-radius: 999px;
+            background: linear-gradient(90deg, rgba(56, 189, 248, 0.96), rgba(45, 212, 191, 0.96));
+        }
+        .bar-fill.priority { background: linear-gradient(90deg, rgba(248, 113, 113, 0.96), rgba(251, 191, 36, 0.96)); }
+
+        @media (max-width: 1100px) {
+            #controls, #metrics { width: calc(50vw - 36px); }
+            #banner { top: auto; bottom: 24px; }
+        }
+
+        @media (max-width: 900px) {
+            html, body { overflow: auto; }
+            canvas { position: fixed; inset: 0; }
+            #controls, #metrics, #banner {
+                position: relative;
+                left: auto;
+                right: auto;
+                top: auto;
+                bottom: auto;
+                transform: none;
+                width: calc(100vw - 32px);
+                max-height: none;
+                margin: 16px;
+            }
         }
     </style>
 </head>
-<body class="text-white">
+<body>
+    <div id="banner">
+        <div id="banner-title" style="font-size: 15px; font-weight: 800; color: #eff6ff;">Adaptive urban traffic control is live</div>
+        <div id="banner-text" style="margin-top: 4px; font-size: 13px; color: #94a3b8;">The controller is balancing queue pressure, wait time, and corridor demand across the junction.</div>
+    </div>
 
-    <!-- UI Overlay -->
-    <div id="ui-panel" class="absolute top-4 left-4 w-72 glass-panel rounded-xl p-5 shadow-2xl transition-transform duration-300 z-10 flex flex-col gap-4">
-        <div class="flex justify-between items-center mb-2">
-            <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500">Traffic Sim</h1>
-            <button id="toggle-ui" class="text-gray-400 hover:text-white transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-            </button>
+    <div id="controls" class="panel">
+        <div class="eyebrow">Urban Congestion Demo</div>
+        <h1>Smart Traffic Management System</h1>
+        <p>Capstone-ready simulation for adaptive traffic lights, corridor pressure monitoring, and priority-vehicle handling at a busy urban intersection.</p>
+
+        <div class="section-title">Scenario Setup</div>
+        <div class="card">
+            <div class="grid-2">
+                <div>
+                    <label for="profile-select">Demand Profile</label>
+                    <select id="profile-select">
+                        <option value="balanced">Balanced flow</option>
+                        <option value="rush-ns">Rush hour north-south</option>
+                        <option value="rush-ew">Commercial east-west</option>
+                        <option value="event">Event dispersal surge</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="mode-select">Signal Strategy</label>
+                    <select id="mode-select">
+                        <option value="adaptive">Adaptive control</option>
+                        <option value="fixed">Fixed cycle</option>
+                    </select>
+                </div>
+            </div>
+            <p id="profile-note" style="margin-top: 10px; font-size: 13px;">Balanced demand keeps arrivals even on all approaches.</p>
         </div>
 
-        <!-- Controls -->
-        <div class="space-y-4">
-            <div>
-                <div class="flex justify-between text-sm text-gray-300 mb-1">
-                    <label>Spawn Rate</label>
-                    <span id="val-spawn">High</span>
-                </div>
-                <input type="range" id="spawn-rate" min="10" max="200" value="150" class="w-full">
-            </div>
+        <div class="card">
+            <label for="spawn-rate">Demand Intensity <span id="val-spawn">High</span></label>
+            <input type="range" id="spawn-rate" min="60" max="220" value="150">
+            <label for="cycle-time" style="margin-top: 16px;">Base Green Window <span id="val-cycle">5.5 s</span></label>
+            <input type="range" id="cycle-time" min="3000" max="12000" step="500" value="5500">
+            <label for="max-speed" style="margin-top: 16px;">Fleet Speed Cap <span id="val-speed">66 km/h</span></label>
+            <input type="range" id="max-speed" min="3" max="10" step="0.5" value="5.5">
+        </div>
 
-            <div>
-                <div class="flex justify-between text-sm text-gray-300 mb-1">
-                    <label>Light Cycle Time</label>
-                    <span id="val-cycle">5s</span>
+        <div class="card">
+            <div class="grid-2">
+                <div>
+                    <label for="emergency-type">Emergency Type</label>
+                    <select id="emergency-type">
+                        <option value="ambulance">Ambulance</option>
+                        <option value="police">Police</option>
+                        <option value="fire">Fire and rescue</option>
+                        <option value="response">Disaster response</option>
+                    </select>
                 </div>
-                <input type="range" id="cycle-time" min="2000" max="15000" step="1000" value="5000" class="w-full">
-            </div>
-
-            <div>
-                <div class="flex justify-between text-sm text-gray-300 mb-1">
-                    <label>Max Speed</label>
-                    <span id="val-speed">60 km/h</span>
+                <div>
+                    <label for="emergency-action">Emergency Action</label>
+                    <select id="emergency-action">
+                        <option value="priority">Priority passage</option>
+                        <option value="lockdown">Intersection lockdown</option>
+                        <option value="rescue">Rescue convoy</option>
+                        <option value="evacuation">Evacuation wave</option>
+                    </select>
                 </div>
-                <input type="range" id="max-speed" min="2" max="10" step="0.5" value="5" class="w-full">
             </div>
-            
-            <div class="flex items-center gap-3 pt-2">
-                <button id="btn-pause" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2 rounded-lg font-medium transition-colors shadow-lg shadow-blue-500/30">
-                    Pause
-                </button>
-                <button id="btn-clear" class="flex-1 bg-red-600 hover:bg-red-500 text-white py-2 rounded-lg font-medium transition-colors shadow-lg shadow-red-500/30">
-                    Clear
-                </button>
+            <label for="priority-dir" style="margin-top: 16px;">Priority Corridor</label>
+            <select id="priority-dir">
+                <option value="">None</option>
+                <option value="3">North corridor</option>
+                <option value="0">East corridor</option>
+                <option value="2">South corridor</option>
+                <option value="1">West corridor</option>
+            </select>
+            <p id="priority-note" style="margin-top: 10px; font-size: 13px;">Dispatch ambulance, police, fire, or disaster-response vehicles with communication-assisted clearance.</p>
+            <div class="button-row">
+                <button id="btn-dispatch" class="primary">Dispatch Emergency</button>
+                <button id="btn-reset-priority" class="secondary">Clear Priority</button>
             </div>
         </div>
-        
-        <div class="mt-2 text-xs text-gray-500 border-t border-gray-700 pt-3 flex justify-between">
-            <span>Vehicles: <span id="stat-count" class="text-gray-300">0</span></span>
-            <span>FPS: <span id="stat-fps" class="text-gray-300">60</span></span>
+
+        <div class="button-row">
+            <button id="btn-pause" class="secondary">Pause Simulation</button>
+            <button id="btn-clear" class="danger">Reset Vehicles</button>
+        </div>
+
+        <div class="section-title">Analytics Log</div>
+        <div class="card">
+            <div class="status-grid">
+                <div><div class="status-label">Samples</div><div id="log-samples" class="status-value">0</div></div>
+                <div><div class="status-label">Events</div><div id="log-events" class="status-value">0</div></div>
+                <div><div class="status-label">Window</div><div id="log-window" class="status-value">0 s</div></div>
+                <div><div class="status-label">Last Export</div><div id="log-export" class="status-value">Never</div></div>
+            </div>
+            <p id="log-last" style="margin-top: 12px; font-size: 13px;">Live automatic logging is active with a 1-second sampling interval and graph feed.</p>
+            <div class="button-row">
+                <button id="btn-export-json" class="secondary">Export JSON</button>
+                <button id="btn-export-csv" class="secondary">Export CSV</button>
+            </div>
+            <div class="button-row">
+                <button id="btn-reset-logs" class="secondary">Reset Logs</button>
+                <button id="btn-snapshot" class="secondary">Log Snapshot</button>
+            </div>
+            <div class="button-row">
+                <button id="btn-graph-page" class="primary full-span">Open Live Graph Page</button>
+            </div>
         </div>
     </div>
 
-    <!-- Hidden Toggle Button for when panel is closed -->
-    <button id="show-ui" class="absolute top-4 left-4 glass-panel p-2 rounded-lg shadow-xl text-gray-400 hover:text-white transition-all z-0 hidden">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
-    </button>
+    <div id="metrics" class="panel">
+        <div class="section-title" style="margin-top: 0;">Network Status</div>
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <div>
+                    <div class="status-label">Controller</div>
+                    <div id="status-mode" class="pill">Adaptive</div>
+                </div>
+                <div style="text-align: right;">
+                    <div class="status-label">Active Green</div>
+                    <div id="status-active" class="status-value">North corridor</div>
+                </div>
+            </div>
+            <div class="status-grid">
+                <div><div class="status-label">Next Candidate</div><div id="status-next" class="status-value">East corridor</div></div>
+                <div><div class="status-label">Priority</div><div id="status-priority" class="status-value">None</div></div>
+                <div><div class="status-label">Emergency Type</div><div id="status-emergency" class="status-value">None</div></div>
+                <div><div class="status-label">Emergency Action</div><div id="status-action" class="status-value">None</div></div>
+                <div><div class="status-label">V2V Links</div><div id="status-links" class="status-value">0</div></div>
+                <div><div class="status-label">Yielding Vehicles</div><div id="status-yield" class="status-value">0</div></div>
+                <div><div class="status-label">Green Timer</div><div id="status-timer" class="status-value">0.0 s</div></div>
+                <div><div class="status-label">Signal Phase</div><div id="status-phase" class="status-value">Green</div></div>
+            </div>
+            <p id="status-note" style="margin-top: 12px; font-size: 13px;">Adaptive controller is balancing queues and arrivals.</p>
+        </div>
+
+        <div class="section-title">System Metrics</div>
+        <div class="metric-grid">
+            <div class="card"><div class="metric-label">Live Vehicles</div><div id="metric-live" class="metric-value">0</div><div class="metric-sub">Current network load</div></div>
+            <div class="card"><div class="metric-label">Throughput / Min</div><div id="metric-throughput" class="metric-value">0</div><div class="metric-sub">Trips leaving the model</div></div>
+            <div class="card"><div class="metric-label">Average Wait</div><div id="metric-wait" class="metric-value">0.0 s</div><div class="metric-sub">Approach delay per vehicle</div></div>
+            <div class="card"><div class="metric-label">Average Speed</div><div id="metric-speed" class="metric-value">0 km/h</div><div class="metric-sub">Live fleet velocity</div></div>
+            <div class="card"><div class="metric-label">Congestion Index</div><div id="metric-congestion" class="metric-value">0</div><div class="metric-sub">0 is clear, 100 is critical</div></div>
+            <div class="card"><div class="metric-label">Completed Trips</div><div id="metric-completed" class="metric-value">0</div><div class="metric-sub">Vehicles served so far</div></div>
+            <div class="card"><div class="metric-label">Emergency Trips</div><div id="metric-emergency" class="metric-value">0</div><div class="metric-sub">Emergency vehicles completed</div></div>
+            <div class="card"><div class="metric-label">V2V Links</div><div id="metric-links" class="metric-value">0</div><div class="metric-sub">Active communication handshakes</div></div>
+        </div>
+
+        <div class="section-title">Corridor Pressure</div>
+        <div class="corridor">
+            <div class="corridor-head"><div class="corridor-name">North</div><div id="north-score" class="corridor-name">0</div></div>
+            <div class="corridor-meta"><span id="north-queue">Queue 0</span><span id="north-wait">Wait 0.0 s</span></div>
+            <div class="bar"><div id="north-bar" class="bar-fill"></div></div>
+        </div>
+        <div class="corridor">
+            <div class="corridor-head"><div class="corridor-name">East</div><div id="east-score" class="corridor-name">0</div></div>
+            <div class="corridor-meta"><span id="east-queue">Queue 0</span><span id="east-wait">Wait 0.0 s</span></div>
+            <div class="bar"><div id="east-bar" class="bar-fill"></div></div>
+        </div>
+        <div class="corridor">
+            <div class="corridor-head"><div class="corridor-name">South</div><div id="south-score" class="corridor-name">0</div></div>
+            <div class="corridor-meta"><span id="south-queue">Queue 0</span><span id="south-wait">Wait 0.0 s</span></div>
+            <div class="bar"><div id="south-bar" class="bar-fill"></div></div>
+        </div>
+        <div class="corridor">
+            <div class="corridor-head"><div class="corridor-name">West</div><div id="west-score" class="corridor-name">0</div></div>
+            <div class="corridor-meta"><span id="west-queue">Queue 0</span><span id="west-wait">Wait 0.0 s</span></div>
+            <div class="bar"><div id="west-bar" class="bar-fill"></div></div>
+        </div>
+    </div>
 
     <canvas id="sim-canvas"></canvas>
 
     <script>
-        /**
-         * Real-Life Traffic Simulation
-         * Utilizes HTML5 Canvas for high-performance rendering.
-         * Implements a simplified car-following kinematic model.
-         */
+        const canvas = document.getElementById("sim-canvas");
+        const ctx = canvas.getContext("2d", { alpha: false });
 
-        const canvas = document.getElementById('sim-canvas');
-        const ctx = canvas.getContext('2d', { alpha: false }); // Optimize for no transparency on base
+        const LIGHT = { RED: 0, GREEN: 1, YELLOW: 2 };
+        const DIR = { EAST: 0, WEST: 1, SOUTH: 2, NORTH: 3 };
+        const DIRECTIONS = [DIR.NORTH, DIR.EAST, DIR.SOUTH, DIR.WEST];
+        const LABELS = {
+            [DIR.NORTH]: "North corridor",
+            [DIR.EAST]: "East corridor",
+            [DIR.SOUTH]: "South corridor",
+            [DIR.WEST]: "West corridor"
+        };
+        const SHORT = {
+            [DIR.NORTH]: "North",
+            [DIR.EAST]: "East",
+            [DIR.SOUTH]: "South",
+            [DIR.WEST]: "West"
+        };
+        const DOM_IDS = {
+            [DIR.NORTH]: "north",
+            [DIR.EAST]: "east",
+            [DIR.SOUTH]: "south",
+            [DIR.WEST]: "west"
+        };
 
-        // --- Configuration & State ---
+        const PROFILES = {
+            balanced: {
+                note: "Balanced demand keeps arrivals even on all approaches.",
+                weights: { [DIR.NORTH]: 1, [DIR.EAST]: 1, [DIR.SOUTH]: 1, [DIR.WEST]: 1 }
+            },
+            "rush-ns": {
+                note: "Commuter traffic is concentrated on the north-south arterial.",
+                weights: { [DIR.NORTH]: 1.8, [DIR.EAST]: 0.8, [DIR.SOUTH]: 1.8, [DIR.WEST]: 0.8 }
+            },
+            "rush-ew": {
+                note: "Market traffic is heavier across east-west corridors.",
+                weights: { [DIR.NORTH]: 0.9, [DIR.EAST]: 1.75, [DIR.SOUTH]: 0.9, [DIR.WEST]: 1.75 }
+            },
+            event: {
+                note: "A one-sided release creates a sharp outbound pulse of traffic.",
+                weights: { [DIR.NORTH]: 0.7, [DIR.EAST]: 1.9, [DIR.SOUTH]: 1.2, [DIR.WEST]: 1.5 }
+            }
+        };
+
+        const EMERGENCY_TYPES = {
+            ambulance: {
+                label: "Ambulance",
+                color: "#f97316",
+                roof: "#60a5fa",
+                controllerBoost: 18,
+                broadcastRadius: 260,
+                yieldDistance: 230,
+                speedBonus: 1.3,
+                sizeBonus: 6
+            },
+            police: {
+                label: "Police",
+                color: "#2563eb",
+                roof: "#f8fafc",
+                controllerBoost: 15,
+                broadcastRadius: 230,
+                yieldDistance: 210,
+                speedBonus: 1.22,
+                sizeBonus: 2
+            },
+            fire: {
+                label: "Fire and Rescue",
+                color: "#dc2626",
+                roof: "#fbbf24",
+                controllerBoost: 17,
+                broadcastRadius: 250,
+                yieldDistance: 225,
+                speedBonus: 1.18,
+                sizeBonus: 10
+            },
+            response: {
+                label: "Disaster Response",
+                color: "#7c3aed",
+                roof: "#22d3ee",
+                controllerBoost: 14,
+                broadcastRadius: 220,
+                yieldDistance: 210,
+                speedBonus: 1.12,
+                sizeBonus: 12
+            }
+        };
+
+        const EMERGENCY_ACTIONS = {
+            priority: {
+                label: "Priority passage",
+                controllerBoost: 8,
+                greenBonus: 1800,
+                holdCrossTraffic: true,
+                allRed: 0
+            },
+            lockdown: {
+                label: "Intersection lockdown",
+                controllerBoost: 10,
+                greenBonus: 1400,
+                holdCrossTraffic: true,
+                allRed: 1200
+            },
+            rescue: {
+                label: "Rescue convoy",
+                controllerBoost: 7,
+                greenBonus: 3200,
+                holdCrossTraffic: true,
+                allRed: 600
+            },
+            evacuation: {
+                label: "Evacuation wave",
+                controllerBoost: 6,
+                greenBonus: 2600,
+                holdCrossTraffic: false,
+                allRed: 0
+            }
+        };
+
+        const DEFAULT_ACTION_BY_TYPE = {
+            ambulance: "priority",
+            police: "lockdown",
+            fire: "rescue",
+            response: "evacuation"
+        };
+
+        const COLORS = {
+            grass: "#07131d",
+            road: "#22303b",
+            mark: "#d3dce8",
+            edge: "#d7e3f4",
+            median: "#fbbf24",
+            red: "#f87171",
+            yellow: "#fbbf24",
+            green: "#34d399",
+            comm: "#38bdf8",
+            cars: ["#e2e8f0", "#f97316", "#60a5fa", "#34d399", "#f43f5e", "#c084fc", "#f8fafc", "#38bdf8"]
+        };
+
+        const ANALYTICS_STORAGE_KEY = "smart-traffic-analytics-feed.v1";
+
         const config = {
             lanesPerDir: 2,
             laneWidth: 32,
             get roadWidth() { return this.lanesPerDir * 2 * this.laneWidth; },
             carWidth: 14,
             carLength: 32,
-            safeDistance: 20,    // Minimum gap between cars
-            brakeDecel: 0.25,    // Braking power
-            accelRate: 0.08,     // Acceleration power
-            yellowTime: 2000,    // Yellow light duration in ms
+            safeDistance: 20,
+            brakeDecel: 0.27,
+            accelRate: 0.085,
+            yellowTime: 1800
         };
 
         const state = {
-            width: window.innerWidth,
-            height: window.innerHeight,
-            cx: window.innerWidth / 2,
-            cy: window.innerHeight / 2,
+            width: innerWidth,
+            height: innerHeight,
+            cx: innerWidth / 2,
+            cy: innerHeight / 2,
             paused: false,
             vehicles: [],
-            spawnRate: 150,     // frames between attempts
-            maxSpeed: 5,        // pixels per frame
-            lightCycleTime: 5000, // ms for green light
+            demandIntensity: 150,
+            maxSpeed: 5.5,
+            lightCycleTime: 5500,
+            controlMode: "adaptive",
+            demandProfile: "balanced",
+            demandWeights: { ...PROFILES.balanced.weights },
+            emergencyDirection: null,
+            emergencyType: null,
+            emergencyAction: null,
+            priorityPending: false,
+            priorityVehicleId: null,
+            activeEmergencyRequest: null,
+            time: 0,
             lastTime: 0,
-            frames: 0,
-            fps: 60,
-            frameCount: 0
+            network: {
+                broadcasts: 0,
+                v2vLinks: 0,
+                yieldingVehicles: 0,
+                controlNote: "Adaptive controller is balancing queues and arrivals."
+            },
+            analytics: {
+                timeline: [],
+                events: [],
+                maxSamples: 1200,
+                maxEvents: 500,
+                sampleIntervalMs: 1000,
+                lastSampleAt: 0,
+                exportedAt: null,
+                publishIntervalMs: 1000,
+                lastPublishedAt: 0
+            },
+            metrics: {
+                liveVehicles: 0,
+                throughputPerMin: 0,
+                averageWaitMs: 0,
+                averageSpeedKmh: 0,
+                congestionIndex: 0,
+                completedTrips: 0,
+                emergencyTrips: 0,
+                v2vLinks: 0,
+                yieldingVehicles: 0,
+                throughputEvents: [],
+                corridors: emptyCorridors()
+            }
         };
 
-        // Enums
-        const LIGHT = { RED: 0, GREEN: 1, YELLOW: 2 };
-        const DIR = { EAST: 0, WEST: 1, SOUTH: 2, NORTH: 3 };
+        function emptyCorridors() {
+            const map = {};
+            for (const dir of DIRECTIONS) {
+                map[dir] = {
+                    queue: 0,
+                    approaching: 0,
+                    moving: 0,
+                    priorityCount: 0,
+                    incoming: 0,
+                    avgWaitMs: 0,
+                    avgSpeedKmh: 0,
+                    pressure: 0,
+                    totalWaitMs: 0,
+                    totalSpeed: 0,
+                    vehicles: 0
+                };
+            }
+            return map;
+        }
 
-        // Colors
-        const COLORS = {
-            grass: '#1a1c23',
-            road: '#2d3748',
-            markings: '#9ca3af',
-            yellowLine: '#fbbf24',
-            redLight: '#ef4444',
-            yellowLight: '#f59e0b',
-            greenLight: '#10b981',
-            carTints: [
-                '#ffffff', '#e2e8f0', '#94a3b8', '#1e293b', // Grays/Whites
-                '#ef4444', '#b91c1c', // Reds
-                '#3b82f6', '#1d4ed8', // Blues
-                '#10b981', '#047857', // Greens
-                '#f59e0b', '#d97706', // Yellows/Oranges
-                '#8b5cf6', '#6d28d9'  // Purples
-            ]
-        };
+        function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+        function shortLabel(dir) { return SHORT[dir] || "Unknown"; }
+        function fullLabel(dir) { return LABELS[dir] || "Unknown"; }
+        function corridorId(dir) { return DOM_IDS[dir]; }
+        function getEmergencyProfile(type) { return EMERGENCY_TYPES[type] || EMERGENCY_TYPES.ambulance; }
+        function getActionProfile(action) { return EMERGENCY_ACTIONS[action] || EMERGENCY_ACTIONS.priority; }
+        function emergencyLabel(type) { return type ? getEmergencyProfile(type).label : "None"; }
+        function actionLabel(action) { return action ? getActionProfile(action).label : "None"; }
+        function simTimeSeconds() { return Number((state.time / 1000).toFixed(2)); }
+        function boundedPush(list, value, max) {
+            list.push(value);
+            if (list.length > max) list.splice(0, list.length - max);
+        }
 
-        // --- Traffic Light System ---
+        function logEvent(type, summary, details = {}) {
+            const entry = {
+                timestampMs: Math.round(state.time),
+                simTimeSec: simTimeSeconds(),
+                type,
+                summary,
+                details
+            };
+            boundedPush(state.analytics.events, entry, state.analytics.maxEvents);
+            return entry;
+        }
+
+        function resetAnalytics(logSeedEvent = true) {
+            state.analytics.timeline = [];
+            state.analytics.events = [];
+            state.analytics.lastSampleAt = 0;
+            state.analytics.exportedAt = null;
+            state.analytics.lastPublishedAt = 0;
+            if (logSeedEvent) {
+                logEvent("log_reset", "Analytics log reset.", {
+                    controlMode: state.controlMode,
+                    demandProfile: state.demandProfile
+                });
+            }
+            persistAnalyticsFeed(true);
+        }
+
+        function buildAnalyticsPayload() {
+            const request = state.activeEmergencyRequest;
+            return {
+                meta: {
+                    project: "Smart Traffic Management System",
+                    sourcePage: "simulation1.html",
+                    storageKey: ANALYTICS_STORAGE_KEY,
+                    updatedAtIso: new Date().toISOString(),
+                    updatedAtMs: Date.now(),
+                    simTimeSec: simTimeSeconds(),
+                    sampleIntervalMs: state.analytics.sampleIntervalMs,
+                    controlMode: state.controlMode,
+                    demandProfile: state.demandProfile,
+                    signalPhase: trafficLights.phase,
+                    activeGreen: shortLabel(trafficLights.currentDir),
+                    nextCandidate: shortLabel(trafficLights.nextDir),
+                    priorityDirection: state.emergencyDirection === null ? "" : shortLabel(state.emergencyDirection),
+                    emergencyType: request ? request.type : state.emergencyType || "",
+                    emergencyAction: request ? request.action : state.emergencyAction || "",
+                    note: "Live browser feed for the standalone traffic graph page."
+                },
+                snapshot: {
+                    liveVehicles: state.metrics.liveVehicles,
+                    throughputPerMin: state.metrics.throughputPerMin,
+                    averageWaitMs: Math.round(state.metrics.averageWaitMs),
+                    averageSpeedKmh: Number(state.metrics.averageSpeedKmh.toFixed(2)),
+                    congestionIndex: Number(state.metrics.congestionIndex.toFixed(2)),
+                    completedTrips: state.metrics.completedTrips,
+                    emergencyTrips: state.metrics.emergencyTrips,
+                    v2vLinks: state.network.v2vLinks,
+                    yieldingVehicles: state.network.yieldingVehicles,
+                    broadcasts: state.network.broadcasts
+                },
+                timeline: state.analytics.timeline,
+                events: state.analytics.events
+            };
+        }
+
+        function persistAnalyticsFeed(force = false) {
+            const now = Date.now();
+            if (!force && now - state.analytics.lastPublishedAt < state.analytics.publishIntervalMs) {
+                return;
+            }
+            try {
+                window.localStorage.setItem(ANALYTICS_STORAGE_KEY, JSON.stringify(buildAnalyticsPayload()));
+                state.analytics.lastPublishedAt = now;
+            } catch (error) {
+                console.warn("Live analytics feed could not be stored.", error);
+            }
+        }
+
+        function buildTimelineSample() {
+            const request = state.activeEmergencyRequest;
+            const telemetry = trafficLights.telemetry || {};
+            const sample = {
+                timestampMs: Math.round(state.time),
+                simTimeSec: simTimeSeconds(),
+                controlMode: state.controlMode,
+                controllerPhase: trafficLights.phase,
+                activeGreen: shortLabel(trafficLights.currentDir),
+                nextCandidate: shortLabel(trafficLights.nextDir),
+                demandProfile: state.demandProfile,
+                demandIntensity: state.demandIntensity,
+                maxSpeedKmh: Math.round(state.maxSpeed * 12),
+                baseGreenMs: state.lightCycleTime,
+                liveVehicles: state.metrics.liveVehicles,
+                throughputPerMin: state.metrics.throughputPerMin,
+                averageWaitMs: Math.round(state.metrics.averageWaitMs),
+                averageSpeedKmh: Number(state.metrics.averageSpeedKmh.toFixed(2)),
+                congestionIndex: Number(state.metrics.congestionIndex.toFixed(2)),
+                v2vLinks: state.network.v2vLinks,
+                yieldingVehicles: state.network.yieldingVehicles,
+                broadcasts: state.network.broadcasts,
+                emergencyDirection: request ? shortLabel(request.direction) : "",
+                emergencyType: request ? request.type : "",
+                emergencyAction: request ? request.action : "",
+                emergencyEtaMs: request ? Math.round(request.eta) : 0,
+                emergencyScore: request ? Number(request.score.toFixed(2)) : 0,
+                constraintMinGreenMs: Math.round(telemetry.minGreenMs || 0),
+                constraintTargetGreenMs: Math.round(telemetry.targetGreenMs || 0),
+                constraintClearanceMs: Math.round(telemetry.clearanceMs || 0),
+                constraintRequestScore: Number((telemetry.requestScore || 0).toFixed(2)),
+                constraintRequestEtaMs: Math.round(telemetry.requestEtaMs || 0)
+            };
+
+            for (const dir of DIRECTIONS) {
+                const prefix = shortLabel(dir).toLowerCase();
+                const corridor = state.metrics.corridors[dir];
+                sample[`${prefix}Queue`] = corridor.queue;
+                sample[`${prefix}Approaching`] = corridor.approaching;
+                sample[`${prefix}Incoming`] = corridor.incoming;
+                sample[`${prefix}Pressure`] = Number(corridor.pressure.toFixed(2));
+                sample[`${prefix}WaitMs`] = Math.round(corridor.avgWaitMs);
+                sample[`${prefix}SpeedKmh`] = Number(corridor.avgSpeedKmh.toFixed(2));
+            }
+
+            return sample;
+        }
+
+        function captureAnalyticsSample(force = false) {
+            if (!force && state.time - state.analytics.lastSampleAt < state.analytics.sampleIntervalMs) {
+                return;
+            }
+            const sample = buildTimelineSample();
+            boundedPush(state.analytics.timeline, sample, state.analytics.maxSamples);
+            state.analytics.lastSampleAt = state.time;
+            persistAnalyticsFeed(true);
+        }
+
+        function csvEscape(value) {
+            const text = value === null || value === undefined ? "" : String(value);
+            if (text.includes(",") || text.includes("\"") || text.includes("\n")) {
+                return `"${text.replace(/"/g, "\"\"")}"`;
+            }
+            return text;
+        }
+
+        function toCsv(rows) {
+            if (!rows.length) return "simTimeSec\n";
+            const headers = Object.keys(rows[0]);
+            const lines = [headers.join(",")];
+            for (const row of rows) {
+                lines.push(headers.map(header => csvEscape(row[header])).join(","));
+            }
+            return lines.join("\n");
+        }
+
+        function downloadTextFile(filename, content, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }
+
+        function exportAnalytics(format) {
+            const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+            if (format === "json") {
+                logEvent("export_json", "Analytics exported as JSON.", {
+                    samples: state.analytics.timeline.length,
+                    events: state.analytics.events.length
+                });
+                const payload = {
+                    meta: {
+                        project: "Smart Traffic Management System",
+                        exportedAtIso: new Date().toISOString(),
+                        controlMode: state.controlMode,
+                        demandProfile: state.demandProfile,
+                        note: "Timeline samples include constraints and results for graph visualization."
+                    },
+                    timeline: state.analytics.timeline,
+                    events: state.analytics.events
+                };
+                downloadTextFile(`traffic-analytics-${stamp}.json`, JSON.stringify(payload, null, 2), "application/json");
+            } else {
+                logEvent("export_csv", "Analytics exported as CSV.", {
+                    samples: state.analytics.timeline.length
+                });
+                downloadTextFile(`traffic-analytics-${stamp}.csv`, toCsv(state.analytics.timeline), "text/csv");
+            }
+            state.analytics.exportedAt = simTimeSeconds();
+            persistAnalyticsFeed(true);
+        }
+
+        function roundedRect(x, y, width, height, radius) {
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + height - radius);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            ctx.lineTo(x + radius, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+        }
+
         class TrafficController {
             constructor() {
                 this.lights = {};
-                this.lights[DIR.NORTH] = LIGHT.GREEN;
-                this.lights[DIR.EAST] = LIGHT.RED;
-                this.lights[DIR.SOUTH] = LIGHT.RED;
-                this.lights[DIR.WEST] = LIGHT.RED;
-                
+                this.phase = "green";
                 this.timer = 0;
-                this.phase = 0; // 0: Green, 1: Yellow
-                this.sequence = [DIR.NORTH, DIR.EAST, DIR.SOUTH, DIR.WEST]; // One direction at a time
+                this.currentDir = DIR.NORTH;
                 this.seqIndex = 0;
-            }
-
-            update(dt) {
-                this.timer += dt;
-                const currentDir = this.sequence[this.seqIndex];
-                
-                if (this.phase === 0 && this.timer > state.lightCycleTime) {
-                    this.phase = 1;
-                    this.lights[currentDir] = LIGHT.YELLOW;
-                    this.timer = 0;
-                } else if (this.phase === 1 && this.timer > config.yellowTime) {
-                    this.phase = 0;
-                    this.lights[currentDir] = LIGHT.RED;
-                    
-                    // Move to next direction
-                    this.seqIndex = (this.seqIndex + 1) % 4;
-                    const nextDir = this.sequence[this.seqIndex];
-                    this.lights[nextDir] = LIGHT.GREEN;
-                    this.timer = 0;
+                this.nextDir = DIR.EAST;
+                this.lastServed = {};
+                this.clearanceDuration = 0;
+                this.telemetry = {
+                    minGreenMs: 2600,
+                    targetGreenMs: state.lightCycleTime,
+                    clearanceMs: 0,
+                    requestScore: 0,
+                    requestEtaMs: 0
+                };
+                for (const dir of DIRECTIONS) {
+                    this.lights[dir] = dir === this.currentDir ? LIGHT.GREEN : LIGHT.RED;
+                    this.lastServed[dir] = 0;
                 }
             }
 
-            getLightState(direction) {
+            setAllRed() {
+                for (const dir of DIRECTIONS) {
+                    this.lights[dir] = LIGHT.RED;
+                }
+            }
+
+            activate(direction, corridors, request) {
+                this.currentDir = direction;
+                this.phase = "green";
+                this.timer = 0;
+                this.lastServed[direction] = state.time;
+                for (const dir of DIRECTIONS) {
+                    this.lights[dir] = dir === direction ? LIGHT.GREEN : LIGHT.RED;
+                }
+                this.nextDir = this.chooseNext(direction, corridors, request);
+
+                if (request && request.direction === direction) {
+                    state.network.controlNote =
+                        `${emergencyLabel(request.type)} granted ${actionLabel(request.action).toLowerCase()} on the ${shortLabel(direction).toLowerCase()} corridor.`;
+                } else if (state.controlMode === "adaptive") {
+                    state.network.controlNote =
+                        `Adaptive controller is serving the ${shortLabel(direction).toLowerCase()} corridor based on pressure, arrivals, and wait time.`;
+                } else {
+                    state.network.controlNote = "Fixed-cycle controller is serving each corridor in sequence.";
+                }
+
+                logEvent("signal_green", `Green granted to ${shortLabel(direction)} corridor.`, {
+                    direction: shortLabel(direction),
+                    requestType: request ? request.type : "",
+                    requestAction: request ? request.action : "",
+                    targetGreenMs: Math.round(this.greenWindow(direction, corridors, request))
+                });
+            }
+
+            clearanceHold(request) {
+                if (!request || request.direction === this.currentDir) return 0;
+                return getActionProfile(request.action).allRed;
+            }
+
+            chooseNext(current, corridors, request) {
+                if (state.controlMode === "fixed") return DIRECTIONS[(this.seqIndex + 1) % DIRECTIONS.length];
+                let best = DIRECTIONS[0];
+                let bestScore = -Infinity;
+                for (const dir of DIRECTIONS) {
+                    const corridor = corridors[dir];
+                    const starvation = Math.min(4.5, (state.time - this.lastServed[dir]) / 5000);
+                    let score =
+                        corridor.pressure +
+                        corridor.incoming * 0.65 +
+                        starvation +
+                        corridor.priorityCount * 2.5;
+                    if (dir === current) score -= 2.25;
+                    if (request && request.direction === dir) {
+                        const etaBoost = clamp(12 - request.eta / 900, 0, 12);
+                        score += request.score + etaBoost;
+                    }
+                    if (score > bestScore) {
+                        best = dir;
+                        bestScore = score;
+                    }
+                }
+                return best;
+            }
+
+            greenWindow(dir, corridors, request) {
+                if (state.controlMode === "fixed") return state.lightCycleTime;
+                const c = corridors[dir];
+                let duration =
+                    state.lightCycleTime +
+                    c.queue * 380 +
+                    c.approaching * 120 +
+                    c.incoming * 90 +
+                    c.avgWaitMs * 0.18;
+                if (request && request.direction === dir) {
+                    duration +=
+                        getActionProfile(request.action).greenBonus +
+                        getEmergencyProfile(request.type).controllerBoost * 90;
+                }
+                return clamp(duration, 3200, 16000);
+            }
+
+            update(dt, corridors) {
+                const request = state.activeEmergencyRequest;
+                this.timer += dt;
+                this.nextDir = this.chooseNext(this.currentDir, corridors, request);
+                const minGreen = request && request.direction !== this.currentDir ? 2000 : 2600;
+                this.telemetry = {
+                    minGreenMs: minGreen,
+                    targetGreenMs: this.greenWindow(this.currentDir, corridors, request),
+                    clearanceMs: this.clearanceHold(request),
+                    requestScore: request ? request.score : 0,
+                    requestEtaMs: request ? request.eta : 0
+                };
+
+                if (this.phase === "green") {
+                    const preempt =
+                        state.controlMode === "adaptive" &&
+                        request &&
+                        request.direction !== this.currentDir &&
+                        this.timer > minGreen &&
+                        request.score > corridors[this.currentDir].pressure + 2;
+
+                    if (this.timer >= this.greenWindow(this.currentDir, corridors, request) || preempt) {
+                        this.phase = "yellow";
+                        this.lights[this.currentDir] = LIGHT.YELLOW;
+                        this.timer = 0;
+                        logEvent("signal_yellow", `Yellow started on ${shortLabel(this.currentDir)} corridor.`, {
+                            direction: shortLabel(this.currentDir),
+                            preempt,
+                            nextCandidate: shortLabel(this.nextDir),
+                            minGreenMs: minGreen,
+                            targetGreenMs: Math.round(this.telemetry.targetGreenMs)
+                        });
+
+                        if (preempt) {
+                            state.network.controlNote =
+                                `Pre-clearing the junction for ${emergencyLabel(request.type).toLowerCase()} access from the ${shortLabel(request.direction).toLowerCase()} corridor.`;
+                        }
+                    }
+                } else if (this.phase === "yellow") {
+                    if (this.timer >= config.yellowTime) {
+                        const clearance = this.clearanceHold(request);
+                        if (clearance > 0) {
+                            this.phase = "all-red";
+                            this.clearanceDuration = clearance;
+                            this.timer = 0;
+                            this.setAllRed();
+                            state.network.controlNote = "All-red clearance is active so the emergency corridor can be isolated safely.";
+                            logEvent("signal_all_red", "All-red clearance activated for emergency isolation.", {
+                                durationMs: clearance,
+                                requestType: request ? request.type : "",
+                                requestAction: request ? request.action : ""
+                            });
+                        } else {
+                            const next = this.chooseNext(this.currentDir, corridors, request);
+                            this.seqIndex = DIRECTIONS.indexOf(next);
+                            this.activate(next, corridors, request);
+                        }
+                    }
+                } else if (this.phase === "all-red" && this.timer >= this.clearanceDuration) {
+                    const next = this.chooseNext(this.currentDir, corridors, request);
+                    this.seqIndex = DIRECTIONS.indexOf(next);
+                    this.activate(next, corridors, request);
+                }
+            }
+
+            getLight(direction) {
                 return this.lights[direction];
             }
         }
 
-        const trafficLights = new TrafficController();
-
-        // --- Vehicle Class ---
         class Vehicle {
-            constructor(direction, lane) {
-                this.id = Math.random().toString(36).substr(2, 9);
+            constructor(direction, lane, options = {}) {
+                this.id = Math.random().toString(36).slice(2, 11);
                 this.direction = direction;
-                this.lane = lane; // 0 is left (free left turn), 1 is right (straight)
+                this.originDirection = direction;
+                this.lane = lane;
+                this.emergencyType = options.emergencyType || null;
+                this.emergencyAction = options.emergencyAction || null;
+                this.priority = Boolean(this.emergencyType || options.priority);
+                this.emergencyProfile = this.priority && this.emergencyType ? getEmergencyProfile(this.emergencyType) : null;
                 this.width = config.carWidth;
-                this.length = config.carLength + (Math.random() * 8 - 4);
-                this.color = COLORS.carTints[Math.floor(Math.random() * COLORS.carTints.length)];
-                this.state = 'STRAIGHT'; // STRAIGHT, TURNING, DONE
+                this.length = config.carLength + (Math.random() * 8 - 4) + (this.emergencyProfile ? this.emergencyProfile.sizeBonus : 0);
+                this.color = this.priority
+                    ? (this.emergencyProfile ? this.emergencyProfile.color : "#fbbf24")
+                    : COLORS.cars[Math.floor(Math.random() * COLORS.cars.length)];
+                this.roofColor = this.emergencyProfile ? this.emergencyProfile.roof : null;
+                this.state = "STRAIGHT";
                 this.angle = this.targetAngle;
-                
-                this.maxSpeed = state.maxSpeed + (Math.random() * 2 - 1); 
-                if (this.lane === 0) this.maxSpeed *= 0.85; 
-
-                this.speed = Math.random() * 2 + (this.maxSpeed * 0.5);
-                this.accel = config.accelRate + (Math.random() * 0.02);
-                
-                const offset = (config.lanesPerDir - this.lane - 0.5) * config.laneWidth;
-                
-                switch (direction) {
-                    case DIR.EAST:
-                        this.x = -this.length; this.y = state.cy - offset; break;
-                    case DIR.WEST:
-                        this.x = state.width + this.length; this.y = state.cy + offset; break;
-                    case DIR.SOUTH:
-                        this.x = state.cx + offset; this.y = -this.length; break;
-                    case DIR.NORTH:
-                        this.x = state.cx - offset; this.y = state.height + this.length; break;
-                }
-
+                this.driverProfile = this.priority
+                    ? 0.98 + Math.random() * 0.34
+                    : 0.7 + Math.random() * 0.56;
+                this.speedFactor = this.driverProfile;
+                if (lane === 0) this.speedFactor *= 0.9;
+                if (this.emergencyProfile) this.speedFactor *= this.emergencyProfile.speedBonus;
+                this.followGap = config.safeDistance + 8 + Math.random() * 28 + (lane === 0 ? 6 : 0);
+                this.headwayFactor = this.priority ? 2.9 + Math.random() * 0.8 : 3.4 + Math.random() * 1.8;
+                if (this.priority) this.followGap *= 0.82;
+                this.speed = Math.max(0.7, state.maxSpeed * this.speedFactor * (this.priority ? 0.62 + Math.random() * 0.24 : 0.28 + Math.random() * 0.42));
+                this.accel = config.accelRate * (0.9 + Math.random() * 0.7) + (this.priority ? 0.03 : 0);
+                this.waitTimeMs = 0;
+                this.travelTimeMs = 0;
+                this.turnProgress = 0;
                 this.stopLineDist = config.roadWidth / 2 + 10;
+                this.commLinks = 0;
+                this.yielding = false;
+                this.yieldMode = null;
+                this.signalUrgency = 0;
+                this.yieldOffset = 0;
+                this.yieldOffsetTarget = 0;
+                this.entryOffset = this.priority ? Math.random() * 18 : 12 + Math.random() * 96;
+
+                const offset = (config.lanesPerDir - lane - 0.5) * config.laneWidth;
+                if (direction === DIR.EAST) { this.x = -this.length - this.entryOffset; this.y = state.cy - offset; }
+                if (direction === DIR.WEST) { this.x = state.width + this.length + this.entryOffset; this.y = state.cy + offset; }
+                if (direction === DIR.SOUTH) { this.x = state.cx + offset; this.y = -this.length - this.entryOffset; }
+                if (direction === DIR.NORTH) { this.x = state.cx - offset; this.y = state.height + this.length + this.entryOffset; }
             }
 
             get targetAngle() {
-                switch(this.direction) {
-                    case DIR.EAST: return 0;
-                    case DIR.WEST: return Math.PI;
-                    case DIR.SOUTH: return Math.PI / 2;
-                    case DIR.NORTH: return -Math.PI / 2;
-                }
+                if (this.direction === DIR.EAST) return 0;
+                if (this.direction === DIR.WEST) return Math.PI;
+                if (this.direction === DIR.SOUTH) return Math.PI / 2;
+                return -Math.PI / 2;
             }
 
-            // Get distance along the path of travel
             getPos() {
-                if (this.state === 'TURNING') {
-                    // Provide a continuous 1D position during the turn for cars behind to track
-                    const arcLen = (Math.PI / 2) * 16;
-                    return this.getStopLinePos() + (this.turnProgress * arcLen);
-                }
-                switch(this.direction) {
-                    case DIR.EAST: return this.x;
-                    case DIR.WEST: return -this.x;
-                    case DIR.SOUTH: return this.y;
-                    case DIR.NORTH: return -this.y;
-                }
+                if (this.state === "TURNING") return this.getStopLinePos() + this.turnProgress * ((Math.PI / 2) * 16);
+                if (this.direction === DIR.EAST) return this.x;
+                if (this.direction === DIR.WEST) return -this.x;
+                if (this.direction === DIR.SOUTH) return this.y;
+                return -this.y;
             }
 
-            // Get stop line position along path of travel
             getStopLinePos() {
-                switch(this.direction) {
-                    case DIR.EAST: return state.cx - this.stopLineDist;
-                    case DIR.WEST: return -(state.cx + this.stopLineDist);
-                    case DIR.SOUTH: return state.cy - this.stopLineDist;
-                    case DIR.NORTH: return -(state.cy + this.stopLineDist);
+                if (this.direction === DIR.EAST) return state.cx - this.stopLineDist;
+                if (this.direction === DIR.WEST) return -(state.cx + this.stopLineDist);
+                if (this.direction === DIR.SOUTH) return state.cy - this.stopLineDist;
+                return -(state.cy + this.stopLineDist);
+            }
+
+            clearCommunicationState() {
+                this.commLinks = 0;
+                this.yielding = false;
+                this.yieldMode = null;
+                this.signalUrgency = 0;
+                this.yieldOffsetTarget = 0;
+            }
+
+            applyCommunicationSignal(mode, urgency) {
+                if (this.priority) return;
+                this.commLinks += 1;
+                this.yielding = true;
+                this.signalUrgency = Math.max(this.signalUrgency, urgency);
+
+                if (mode === "corridor-clear") {
+                    this.yieldMode = "corridor-clear";
+                    this.yieldOffsetTarget = this.lane === 1 ? config.laneWidth * 0.22 : -config.laneWidth * 0.18;
+                } else if (this.yieldMode !== "corridor-clear") {
+                    this.yieldMode = "hold";
+                    this.yieldOffsetTarget = 0;
                 }
             }
 
-            update() {
-                let targetSpeed = this.maxSpeed;
-                let myPos = this.getPos();
+            update(dt) {
+                this.travelTimeMs += dt;
+                const freeFlow = Math.max(1.15, state.maxSpeed * this.speedFactor);
+                let targetSpeed = this.priority ? freeFlow * 1.06 : freeFlow;
+                const myPos = this.getPos();
                 let distToObstacle = Infinity;
-
-                // 1. Find car ahead using strict 2D vector projection and 1D paths
                 let carAhead = null;
                 let minDist = Infinity;
-                
-                for (let i = 0; i < state.vehicles.length; i++) {
-                    let other = state.vehicles[i];
-                    if (other.id === this.id) continue;
 
-                    // A. Standard Path Check (Reliable for cars in the same rigid queue)
+                for (const other of state.vehicles) {
+                    if (other.id === this.id) continue;
                     if (other.direction === this.direction && other.lane === this.lane && other.state === this.state) {
-                        let dist = other.getPos() - myPos - ((this.length + other.length) / 2);
+                        const dist = other.getPos() - myPos - (this.length + other.length) / 2;
                         if (dist > 0 && dist < minDist) {
                             minDist = dist;
                             carAhead = other;
                         }
                     }
-
-                    // B. Universal 2D Spatial Overlap Check (Catches merges, turns, and immediate physical overlaps)
-                    let dx = other.x - this.x;
-                    let dy = other.y - this.y;
-                    let dist2D = Math.sqrt(dx*dx + dy*dy);
-                    
-                    if (dist2D < config.carLength * 3) { // Only check physically close vehicles
-                        let myVx = Math.cos(this.angle);
-                        let myVy = Math.sin(this.angle);
-                        
-                        let dotProduct = dx * myVx + dy * myVy; // Distance ahead of us
-                        let crossProduct = Math.abs(dx * myVy - dy * myVx); // Distance beside us
-                        
-                        // If the other car is in front of us (>=0) and within our lane width trajectory
-                        if (dotProduct >= 0 && crossProduct < config.carWidth * 1.5) {
-                            let distPath = dotProduct - ((this.length + other.length) / 2);
-                            
+                    const dx = other.x - this.x;
+                    const dy = other.y - this.y;
+                    const dist2D = Math.sqrt(dx * dx + dy * dy);
+                    if (dist2D < config.carLength * 3.1) {
+                        const vx = Math.cos(this.angle);
+                        const vy = Math.sin(this.angle);
+                        const dot = dx * vx + dy * vy;
+                        const cross = Math.abs(dx * vy - dy * vx);
+                        if (dot >= 0 && cross < config.carWidth * 1.6) {
+                            const distPath = dot - (this.length + other.length) / 2;
                             if (distPath > 0 && distPath < minDist) {
                                 minDist = distPath;
                                 carAhead = other;
-                            } else if (distPath <= 0 && dist2D < config.carLength * 1.2) {
-                                // Hard emergency overlap detected! Force immediate braking.
-                                minDist = 0.1; 
+                            } else if (distPath <= 0 && dist2D < config.carLength * 1.15) {
+                                minDist = 0.1;
                                 carAhead = other;
                             }
                         }
                     }
                 }
 
-                if (carAhead) {
-                    distToObstacle = minDist;
+                if (carAhead) distToObstacle = minDist;
+
+                const light = trafficLights.getLight(this.direction);
+                const stopLinePos = this.getStopLinePos();
+                const distToStop = stopLinePos - myPos;
+                let effectiveLight = light;
+                if (this.lane === 0) effectiveLight = LIGHT.GREEN;
+                if (this.priority && trafficLights.currentDir === this.originDirection && trafficLights.phase === "green") {
+                    effectiveLight = LIGHT.GREEN;
+                }
+                if (distToStop > 0 && distToStop < 210 && effectiveLight !== LIGHT.GREEN && distToStop < distToObstacle) {
+                    distToObstacle = distToStop;
+                    if (effectiveLight === LIGHT.YELLOW && distToStop < 45 && this.speed > 2) distToObstacle = Infinity;
                 }
 
-                // 2. Check Traffic Lights
-                const lightState = trafficLights.getLightState(this.direction);
-                const stopLinePos = this.getStopLinePos();
-                const distToStopLine = stopLinePos - myPos;
-                
-                // Free Left Turn logic: Lane 0 ignores the red light
-                let effectiveLightState = lightState;
-                if (this.lane === 0) {
-                    effectiveLightState = LIGHT.GREEN; 
-                }
-                
-                // If approaching intersection and light is not green
-                if (distToStopLine > 0 && distToStopLine < 200 && effectiveLightState !== LIGHT.GREEN) {
-                    if (distToStopLine < distToObstacle) {
-                        distToObstacle = distToStopLine;
-                        if (effectiveLightState === LIGHT.YELLOW && distToStopLine < 40 && this.speed > 2) {
-                            distToObstacle = Infinity; 
-                        }
+                if (!this.priority && this.yielding) {
+                    if (this.yieldMode === "hold" && distToStop > 0 && distToStop < 240) {
+                        distToObstacle = Math.min(distToObstacle, Math.max(0.1, distToStop - 24 - this.signalUrgency * 4));
+                        targetSpeed = Math.min(targetSpeed, freeFlow * 0.45);
+                    } else if (this.yieldMode === "corridor-clear" && distToStop > -45 && distToStop < 130) {
+                        targetSpeed = Math.max(targetSpeed, freeFlow * 1.08);
                     }
                 }
 
-                // Trigger Turning Maneuver
-                if (this.lane === 0 && this.state === 'STRAIGHT' && myPos >= stopLinePos) {
-                    this.state = 'TURNING';
+                if (
+                    this.priority &&
+                    state.activeEmergencyRequest &&
+                    state.activeEmergencyRequest.vehicleId === this.id &&
+                    distToStop > 0 &&
+                    distToStop < 180 &&
+                    trafficLights.currentDir !== this.originDirection
+                ) {
+                    targetSpeed = Math.min(targetSpeed, freeFlow * 0.7);
+                }
+
+                if (this.lane === 0 && this.state === "STRAIGHT" && myPos >= stopLinePos) {
+                    this.state = "TURNING";
                     this.turnProgress = 0;
                     this.origDir = this.direction;
                 }
 
-                // 3. Apply Kinematics (Car Following Logic)
-                const safeGap = config.safeDistance + (this.speed * 4); 
-
+                const safeGap = this.followGap + this.speed * this.headwayFactor;
                 if (distToObstacle < safeGap) {
-                    // Decelerate
-                    let brakingMultiplier = 1;
-                    if (distToObstacle < config.safeDistance) brakingMultiplier = 2.5; 
-                    
-                    if (distToObstacle <= 2) {
-                        // Anti-overlap emergency brake
-                        targetSpeed = 0;
-                        this.speed = 0;
-                    } else if (carAhead && distToObstacle === minDist) {
-                        targetSpeed = Math.min(carAhead.speed, targetSpeed);
-                    } else {
-                        targetSpeed = 0; // Stopping for light
-                    }
-                    
-                    this.speed -= config.brakeDecel * brakingMultiplier;
+                    let braking = distToObstacle < config.safeDistance ? 2.65 : 1.15;
+                    if (distToObstacle <= 2) { targetSpeed = 0; this.speed = 0; }
+                    else if (carAhead && distToObstacle === minDist) targetSpeed = Math.min(carAhead.speed, targetSpeed);
+                    else targetSpeed = 0;
+                    if (this.priority) braking *= 0.88;
+                    this.speed -= config.brakeDecel * braking;
                 } else {
-                    // Accelerate
                     this.speed += this.accel;
                 }
 
-                // Clamp speed rigorously
-                this.speed = Math.max(0, Math.min(this.speed, targetSpeed));
+                this.speed = clamp(this.speed, 0, targetSpeed);
 
-                // 4. Move
-                if (this.state === 'TURNING') {
-                    this.speed = Math.min(this.speed, this.maxSpeed * 0.7); // slow down in turns
-                    const R = 16; // strict turn radius for left lane
-                    const arcLen = (Math.PI / 2) * R;
-                    
+                if (this.state === "TURNING") {
+                    this.speed = Math.min(this.speed, freeFlow * (this.priority ? 0.8 : 0.72));
+                    const r = 16;
+                    const arcLen = (Math.PI / 2) * r;
                     this.turnProgress += this.speed / arcLen;
-                    
                     if (this.turnProgress >= 1) {
-                        // Turn complete! Merge into new perpendicular lane
                         this.turnProgress = 1;
-                        this.state = 'DONE';
+                        this.state = "DONE";
                         if (this.origDir === DIR.EAST) this.direction = DIR.NORTH;
                         else if (this.origDir === DIR.WEST) this.direction = DIR.SOUTH;
                         else if (this.origDir === DIR.NORTH) this.direction = DIR.WEST;
                         else if (this.origDir === DIR.SOUTH) this.direction = DIR.EAST;
                         this.angle = this.targetAngle;
-                        
-                        // Snap to exact lane positions downstream
                         if (this.direction === DIR.NORTH) { this.x = state.cx - 48; this.y = state.cy - 64; }
                         if (this.direction === DIR.SOUTH) { this.x = state.cx + 48; this.y = state.cy + 64; }
                         if (this.direction === DIR.WEST) { this.x = state.cx - 64; this.y = state.cy + 48; }
                         if (this.direction === DIR.EAST) { this.x = state.cx + 64; this.y = state.cy - 48; }
                     } else {
-                        // Execute curved parametric path based on origin
-                        let p = this.turnProgress;
-                        if (this.origDir === DIR.EAST) {
-                            this.x = state.cx - 64 + R * Math.sin(p * Math.PI/2);
-                            this.y = state.cy - 64 + R * Math.cos(p * Math.PI/2);
-                            this.angle = p * (-Math.PI/2); 
-                        } else if (this.origDir === DIR.WEST) {
-                            this.x = state.cx + 64 - R * Math.sin(p * Math.PI/2);
-                            this.y = state.cy + 64 - R * Math.cos(p * Math.PI/2);
-                            this.angle = Math.PI + p * (-Math.PI/2);
-                        } else if (this.origDir === DIR.NORTH) {
-                            this.x = state.cx - 64 + R * Math.cos(p * Math.PI/2);
-                            this.y = state.cy + 64 - R * Math.sin(p * Math.PI/2);
-                            this.angle = -Math.PI/2 + p * (-Math.PI/2);
-                        } else if (this.origDir === DIR.SOUTH) {
-                            this.x = state.cx + 64 - R * Math.cos(p * Math.PI/2);
-                            this.y = state.cy - 64 + R * Math.sin(p * Math.PI/2);
-                            this.angle = Math.PI/2 + p * (-Math.PI/2);
-                        }
+                        const p = this.turnProgress;
+                        if (this.origDir === DIR.EAST) { this.x = state.cx - 64 + r * Math.sin(p * Math.PI / 2); this.y = state.cy - 64 + r * Math.cos(p * Math.PI / 2); this.angle = p * (-Math.PI / 2); }
+                        if (this.origDir === DIR.WEST) { this.x = state.cx + 64 - r * Math.sin(p * Math.PI / 2); this.y = state.cy + 64 - r * Math.cos(p * Math.PI / 2); this.angle = Math.PI + p * (-Math.PI / 2); }
+                        if (this.origDir === DIR.NORTH) { this.x = state.cx - 64 + r * Math.cos(p * Math.PI / 2); this.y = state.cy + 64 - r * Math.sin(p * Math.PI / 2); this.angle = -Math.PI / 2 + p * (-Math.PI / 2); }
+                        if (this.origDir === DIR.SOUTH) { this.x = state.cx + 64 - r * Math.cos(p * Math.PI / 2); this.y = state.cy - 64 + r * Math.sin(p * Math.PI / 2); this.angle = Math.PI / 2 + p * (-Math.PI / 2); }
                     }
                 } else {
-                    switch(this.direction) {
-                        case DIR.EAST: this.x += this.speed; break;
-                        case DIR.WEST: this.x -= this.speed; break;
-                        case DIR.SOUTH: this.y += this.speed; break;
-                        case DIR.NORTH: this.y -= this.speed; break;
-                    }
+                    if (this.direction === DIR.EAST) this.x += this.speed;
+                    if (this.direction === DIR.WEST) this.x -= this.speed;
+                    if (this.direction === DIR.SOUTH) this.y += this.speed;
+                    if (this.direction === DIR.NORTH) this.y -= this.speed;
                     this.angle = this.targetAngle;
                 }
+
+                const stopDistance = this.getStopLinePos() - this.getPos();
+                if (stopDistance > -30 && stopDistance < 260 && this.speed < 0.8) this.waitTimeMs += dt;
+                const easing = this.yielding ? 0.2 : 0.12;
+                this.yieldOffset += (this.yieldOffsetTarget - this.yieldOffset) * easing;
             }
 
-            draw(ctx) {
+            draw() {
+                const drawX =
+                    this.direction === DIR.NORTH || this.direction === DIR.SOUTH ? this.x + this.yieldOffset : this.x;
+                const drawY =
+                    this.direction === DIR.EAST || this.direction === DIR.WEST ? this.y + this.yieldOffset : this.y;
+
                 ctx.save();
-                ctx.translate(this.x, this.y);
-
+                ctx.translate(drawX, drawY);
                 ctx.rotate(this.angle);
-
-                // Shadow
-                ctx.shadowColor = 'rgba(0,0,0,0.5)';
-                ctx.shadowBlur = 6;
-                ctx.shadowOffsetY = 3;
-
-                // Car Body
-                ctx.fillStyle = this.color;
-                
-                // Draw rounded rectangle for car
                 const hw = this.width / 2;
                 const hl = this.length / 2;
-                const r = 4; // border radius
-                
-                ctx.beginPath();
-                ctx.moveTo(-hl + r, -hw);
-                ctx.lineTo(hl - r, -hw);
-                ctx.quadraticCurveTo(hl, -hw, hl, -hw + r);
-                ctx.lineTo(hl, hw - r);
-                ctx.quadraticCurveTo(hl, hw, hl - r, hw);
-                ctx.lineTo(-hl + r, hw);
-                ctx.quadraticCurveTo(-hl, hw, -hl, hw - r);
-                ctx.lineTo(-hl, -hw + r);
-                ctx.quadraticCurveTo(-hl, -hw, -hl + r, -hw);
+
+                ctx.shadowColor = "rgba(2, 6, 23, 0.55)";
+                ctx.shadowBlur = 8;
+                ctx.shadowOffsetY = 3;
+                ctx.fillStyle = this.color;
+                roundedRect(-hl, -hw, this.length, this.width, 4);
                 ctx.fill();
 
-                // Windshield / Roof / Details (Darker overlay)
-                ctx.shadowColor = 'transparent';
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-                // Front windshield
+                ctx.shadowColor = "transparent";
+                if (this.priority) {
+                    ctx.strokeStyle = "rgba(253, 224, 71, 0.92)";
+                    ctx.lineWidth = 2;
+                    roundedRect(-hl, -hw, this.length, this.width, 4);
+                    ctx.stroke();
+                    ctx.fillStyle = Math.sin(state.time / 180) > 0 ? this.roofColor : "#f8fafc";
+                    ctx.fillRect(-4, -2.4, 8, 4.8);
+                }
+
+                ctx.fillStyle = "rgba(15, 23, 42, 0.45)";
                 ctx.fillRect(hl - 12, -hw + 2, 6, this.width - 4);
-                // Rear windshield
                 ctx.fillRect(-hl + 4, -hw + 2, 4, this.width - 4);
-                
-                // Headlights (glowing if moving forward and not daytime, but let's always glow slightly)
-                const glow = Math.random() * 0.2 + 0.8;
-                ctx.fillStyle = `rgba(255, 255, 200, ${glow})`;
+
+                ctx.fillStyle = "rgba(255, 255, 220, 0.92)";
                 ctx.beginPath(); ctx.arc(hl, -hw + 3, 2, 0, Math.PI * 2); ctx.fill();
                 ctx.beginPath(); ctx.arc(hl, hw - 3, 2, 0, Math.PI * 2); ctx.fill();
 
-                // Brake lights
-                if (this.speed < 0.5 || (this.speed < this.maxSpeed - 1 && this.accel < 0)) {
-                    ctx.fillStyle = '#ff0000';
-                    ctx.shadowColor = '#ff0000';
-                    ctx.shadowBlur = 8;
-                } else {
-                    ctx.fillStyle = '#880000';
-                    ctx.shadowColor = 'transparent';
-                }
+                ctx.fillStyle = this.speed < 0.45 ? "#ff4d4d" : "#7f1d1d";
                 ctx.fillRect(-hl, -hw + 1, 2, 4);
                 ctx.fillRect(-hl, hw - 5, 2, 4);
 
+                if (this.yielding && !this.priority) {
+                    ctx.strokeStyle = "rgba(56, 189, 248, 0.65)";
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(-hl - 4, -hw - 4);
+                    ctx.lineTo(hl + 4, -hw - 4);
+                    ctx.stroke();
+                }
                 ctx.restore();
             }
 
             isOffScreen() {
-                const margin = 100;
-                return (this.x < -margin || this.x > state.width + margin || 
-                        this.y < -margin || this.y > state.height + margin);
+                const margin = 110;
+                return this.x < -margin || this.x > state.width + margin || this.y < -margin || this.y > state.height + margin;
             }
         }
 
-        // --- Core Simulation Engine ---
+        const trafficLights = new TrafficController();
 
         function resize() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
+            canvas.width = innerWidth;
+            canvas.height = innerHeight;
             state.width = canvas.width;
             state.height = canvas.height;
             state.cx = state.width / 2;
             state.cy = state.height / 2;
         }
 
+        function demandText(value) {
+            if (value < 95) return "Low";
+            if (value < 135) return "Moderate";
+            if (value < 185) return "High";
+            return "Critical";
+        }
+
+        function spawnProbability() {
+            return 0.012 + (state.demandIntensity / 220) * 0.09;
+        }
+
+        function setProfile(key) {
+            const profile = PROFILES[key] || PROFILES.balanced;
+            state.demandProfile = key;
+            state.demandWeights = { ...profile.weights };
+            document.getElementById("profile-note").textContent = profile.note;
+        }
+
+        function pickDirection() {
+            let total = 0;
+            for (const dir of DIRECTIONS) total += state.demandWeights[dir];
+            let roll = Math.random() * total;
+            for (const dir of DIRECTIONS) {
+                roll -= state.demandWeights[dir];
+                if (roll <= 0) return dir;
+            }
+            return DIRECTIONS[0];
+        }
+
+        function canSpawnVehicle(candidate) {
+            for (const vehicle of state.vehicles) {
+                if (vehicle.state === "DONE") continue;
+                const dx = vehicle.x - candidate.x;
+                const dy = vehicle.y - candidate.y;
+                const sameLane = vehicle.originDirection === candidate.originDirection && vehicle.lane === candidate.lane;
+                const minGap = sameLane
+                    ? (vehicle.length + candidate.length) / 2 + Math.max(candidate.followGap, vehicle.followGap * 0.78)
+                    : config.carLength * 1.55;
+                if (Math.sqrt(dx * dx + dy * dy) < minGap) return false;
+            }
+            return true;
+        }
+
+        function spawnVehicle(direction, lane, options = {}) {
+            const vehicle = new Vehicle(direction, lane, options);
+            if (!canSpawnVehicle(vehicle)) return null;
+            state.vehicles.push(vehicle);
+            if (vehicle.priority) state.priorityVehicleId = vehicle.id;
+            return vehicle;
+        }
+
+        function attemptSpawn(options = {}) {
+            const direction = options.direction ?? pickDirection();
+            const lane = options.lane ?? (Math.random() < 0.34 ? 0 : 1);
+            return spawnVehicle(direction, lane, options);
+        }
+
+        function estimateArrivalMs(vehicle) {
+            const remaining = Math.max(0, vehicle.getStopLinePos() - vehicle.getPos());
+            return (remaining / Math.max(vehicle.speed, 1.2)) * 16;
+        }
+
+        function clearPriorityState() {
+            const hadEmergency = state.emergencyDirection !== null || state.priorityVehicleId !== null;
+            for (const vehicle of state.vehicles) {
+                if (!vehicle.priority) continue;
+                vehicle.priority = false;
+                vehicle.emergencyType = null;
+                vehicle.emergencyAction = null;
+                vehicle.emergencyProfile = null;
+                vehicle.roofColor = null;
+                vehicle.color = COLORS.cars[Math.floor(Math.random() * COLORS.cars.length)];
+            }
+            state.emergencyDirection = null;
+            state.emergencyType = null;
+            state.emergencyAction = null;
+            state.priorityPending = false;
+            state.priorityVehicleId = null;
+            state.activeEmergencyRequest = null;
+            state.network.controlNote =
+                state.controlMode === "adaptive"
+                    ? "Adaptive controller is balancing queues and arrivals."
+                    : "Fixed-cycle controller is serving each corridor in sequence.";
+            document.getElementById("priority-dir").value = "";
+            document.getElementById("priority-note").textContent = "No emergency priority is currently requested.";
+            if (hadEmergency) {
+                logEvent("priority_cleared", "Emergency priority was cleared.", {
+                    remainingVehicles: state.vehicles.length
+                });
+            }
+        }
+
+        function dispatchEmergency() {
+            const value = document.getElementById("priority-dir").value;
+            if (value === "") {
+                document.getElementById("priority-note").textContent = "Choose a corridor before dispatching an emergency vehicle.";
+                return;
+            }
+
+            const direction = Number(value);
+            const type = document.getElementById("emergency-type").value;
+            const action = document.getElementById("emergency-action").value;
+
+            state.emergencyDirection = direction;
+            state.emergencyType = type;
+            state.emergencyAction = action;
+
+            const vehicle = attemptSpawn({
+                direction,
+                lane: 1,
+                emergencyType: type,
+                emergencyAction: action
+            });
+
+            state.priorityPending = !vehicle;
+            state.priorityVehicleId = vehicle ? vehicle.id : null;
+            state.activeEmergencyRequest = {
+                vehicleId: vehicle ? vehicle.id : null,
+                direction,
+                type,
+                action,
+                eta: vehicle ? estimateArrivalMs(vehicle) : 0,
+                score:
+                    getEmergencyProfile(type).controllerBoost +
+                    getActionProfile(action).controllerBoost
+            };
+
+            document.getElementById("priority-note").textContent = vehicle
+                ? `${emergencyLabel(type)} dispatched on the ${shortLabel(direction).toLowerCase()} corridor with ${actionLabel(action).toLowerCase()}.`
+                : `${emergencyLabel(type)} queued on the ${shortLabel(direction).toLowerCase()} corridor while the controller pre-clears the junction.`;
+
+            logEvent(vehicle ? "emergency_dispatch" : "emergency_queued", document.getElementById("priority-note").textContent, {
+                direction: shortLabel(direction),
+                type,
+                action,
+                vehicleId: vehicle ? vehicle.id : ""
+            });
+
+            computeMetrics();
+            buildCommunicationNetwork();
+        }
+
+        function recordCompletion(vehicle) {
+            state.metrics.completedTrips += 1;
+            state.metrics.throughputEvents.push(state.time);
+            while (state.metrics.throughputEvents.length && state.metrics.throughputEvents[0] < state.time - 60000) {
+                state.metrics.throughputEvents.shift();
+            }
+            if (vehicle.priority) {
+                state.metrics.emergencyTrips += 1;
+                logEvent("emergency_complete", `${emergencyLabel(vehicle.emergencyType)} completed its corridor passage.`, {
+                    type: vehicle.emergencyType,
+                    action: vehicle.emergencyAction,
+                    origin: shortLabel(vehicle.originDirection)
+                });
+            } else {
+                logEvent("vehicle_complete", "Vehicle completed its trip.", {
+                    origin: shortLabel(vehicle.originDirection)
+                });
+            }
+            if (vehicle.priority && vehicle.id === state.priorityVehicleId) clearPriorityState();
+        }
+
+        function buildCommunicationNetwork() {
+            state.network.broadcasts = 0;
+            state.network.v2vLinks = 0;
+            state.network.yieldingVehicles = 0;
+
+            for (const vehicle of state.vehicles) {
+                vehicle.clearCommunicationState();
+            }
+
+            const requests = [];
+
+            for (const emergency of state.vehicles) {
+                if (!emergency.priority || emergency.state === "DONE") continue;
+
+                const profile = getEmergencyProfile(emergency.emergencyType);
+                const action = getActionProfile(emergency.emergencyAction);
+                const eta = estimateArrivalMs(emergency);
+
+                requests.push({
+                    vehicleId: emergency.id,
+                    direction: emergency.originDirection,
+                    type: emergency.emergencyType,
+                    action: emergency.emergencyAction,
+                    eta,
+                    score:
+                        profile.controllerBoost +
+                        action.controllerBoost +
+                        clamp(12 - eta / 900, 0, 12)
+                });
+
+                state.network.broadcasts += 1;
+
+                for (const other of state.vehicles) {
+                    if (other.id === emergency.id || other.priority || other.state === "DONE") continue;
+
+                    const dx = other.x - emergency.x;
+                    const dy = other.y - emergency.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance > profile.broadcastRadius) continue;
+
+                    const sameApproach = other.originDirection === emergency.originDirection;
+                    if (sameApproach) {
+                        const relativePos = other.getPos() - emergency.getPos();
+                        if (relativePos > -20 && relativePos < profile.yieldDistance) {
+                            other.applyCommunicationSignal("corridor-clear", profile.controllerBoost / 10);
+                            state.network.v2vLinks += 1;
+                        }
+                    } else if (action.holdCrossTraffic) {
+                        const stopDistance = other.getStopLinePos() - other.getPos();
+                        if (stopDistance > -20 && stopDistance < 240) {
+                            other.applyCommunicationSignal("hold", action.controllerBoost / 10);
+                            state.network.v2vLinks += 1;
+                        }
+                    }
+                }
+            }
+
+            for (const vehicle of state.vehicles) {
+                if (vehicle.yielding && !vehicle.priority) {
+                    state.network.yieldingVehicles += 1;
+                }
+            }
+
+            requests.sort((a, b) => {
+                if (b.score !== a.score) return b.score - a.score;
+                return a.eta - b.eta;
+            });
+
+            if (requests.length) {
+                state.activeEmergencyRequest = requests[0];
+                state.emergencyDirection = requests[0].direction;
+                state.emergencyType = requests[0].type;
+                state.emergencyAction = requests[0].action;
+            } else if (state.priorityPending && state.emergencyDirection !== null && state.emergencyType && state.emergencyAction) {
+                state.activeEmergencyRequest = {
+                    vehicleId: state.priorityVehicleId,
+                    direction: state.emergencyDirection,
+                    type: state.emergencyType,
+                    action: state.emergencyAction,
+                    eta: 0,
+                    score:
+                        getEmergencyProfile(state.emergencyType).controllerBoost +
+                        getActionProfile(state.emergencyAction).controllerBoost
+                };
+            } else if (!state.priorityPending) {
+                state.activeEmergencyRequest = null;
+            }
+
+            state.metrics.v2vLinks = state.network.v2vLinks;
+            state.metrics.yieldingVehicles = state.network.yieldingVehicles;
+        }
+
+        function computeMetrics() {
+            const corridors = emptyCorridors();
+            let totalSpeed = 0;
+            let totalApproachWait = 0;
+            let approachVehicles = 0;
+            let totalQueue = 0;
+
+            for (const vehicle of state.vehicles) {
+                const bucket = corridors[vehicle.originDirection];
+                const speedKmh = vehicle.speed * 12;
+                const stopDistance = vehicle.getStopLinePos() - vehicle.getPos();
+                const onApproach = vehicle.state !== "DONE" && stopDistance > -35 && stopDistance < 250;
+                const incomingSoon = vehicle.state !== "DONE" && stopDistance >= 250 && stopDistance < 470;
+                bucket.vehicles += 1;
+                bucket.totalSpeed += speedKmh;
+                totalSpeed += speedKmh;
+                if (vehicle.priority) bucket.priorityCount += 1;
+                if (incomingSoon) bucket.incoming += 1;
+                if (onApproach) {
+                    bucket.approaching += 1;
+                    bucket.totalWaitMs += vehicle.waitTimeMs;
+                    if (vehicle.speed < 0.85) bucket.queue += 1;
+                    else bucket.moving += 1;
+                    totalApproachWait += vehicle.waitTimeMs;
+                    approachVehicles += 1;
+                }
+            }
+
+            for (const dir of DIRECTIONS) {
+                const bucket = corridors[dir];
+                bucket.avgWaitMs = bucket.approaching ? bucket.totalWaitMs / bucket.approaching : 0;
+                bucket.avgSpeedKmh = bucket.vehicles ? bucket.totalSpeed / bucket.vehicles : 0;
+                bucket.pressure =
+                    bucket.queue * 2.2 +
+                    bucket.approaching * 0.85 +
+                    bucket.incoming * 0.55 +
+                    bucket.priorityCount * 6 +
+                    Math.min(7, bucket.avgWaitMs / 1800);
+                totalQueue += bucket.queue;
+            }
+
+            while (state.metrics.throughputEvents.length && state.metrics.throughputEvents[0] < state.time - 60000) {
+                state.metrics.throughputEvents.shift();
+            }
+
+            state.metrics.liveVehicles = state.vehicles.length;
+            state.metrics.throughputPerMin = state.metrics.throughputEvents.length;
+            state.metrics.averageWaitMs = approachVehicles ? totalApproachWait / approachVehicles : 0;
+            state.metrics.averageSpeedKmh = state.vehicles.length ? totalSpeed / state.vehicles.length : 0;
+            state.metrics.congestionIndex = clamp(
+                totalQueue * 9 + state.metrics.averageWaitMs / 220 + state.metrics.liveVehicles * 0.8 - state.metrics.averageSpeedKmh * 0.24,
+                0,
+                100
+            );
+            state.metrics.corridors = corridors;
+        }
+
         function drawRoads() {
-            // Fill background
             ctx.fillStyle = COLORS.grass;
             ctx.fillRect(0, 0, state.width, state.height);
-
             const rw = config.roadWidth;
             const hw = rw / 2;
             const lw = config.laneWidth;
 
-            // Draw asphalt
             ctx.fillStyle = COLORS.road;
-            // Horizontal road
             ctx.fillRect(0, state.cy - hw, state.width, rw);
-            // Vertical road
             ctx.fillRect(state.cx - hw, 0, rw, state.height);
+            ctx.fillStyle = "rgba(15, 23, 42, 0.34)";
+            ctx.fillRect(state.cx - hw - 10, state.cy - hw - 10, rw + 20, rw + 20);
 
-            // Draw Markings
-            
-            // Function to draw lines avoiding intersection
-            function drawLineWithGap(x1, y1, x2, y2, isDashed) {
+            function gapLine(x1, y1, x2, y2, dashed) {
                 ctx.beginPath();
-                if (isDashed) ctx.setLineDash([15, 15]);
-                else ctx.setLineDash([]);
-                
-                const dx = x2 - x1;
-                const dy = y2 - y1;
-                const len = Math.sqrt(dx*dx + dy*dy);
-                if (len === 0) return;
-                const ux = dx/len;
-                const uy = dy/len;
-
-                // Stop drawing at intersection boundaries
-                let drawLen = len;
-                if (dx !== 0) { // horizontal
-                    if (x1 < state.cx) drawLen = Math.max(0, state.cx - hw - x1);
-                    else { x1 = state.cx + hw; drawLen = x2 - x1; }
-                } else { // vertical
-                    if (y1 < state.cy) drawLen = Math.max(0, state.cy - hw - y1);
-                    else { y1 = state.cy + hw; drawLen = y2 - y1; }
+                ctx.setLineDash(dashed ? [15, 15] : []);
+                if (y1 === y2) {
+                    if (x1 < state.cx) x2 = Math.min(x2, state.cx - hw);
+                    else x1 = Math.max(x1, state.cx + hw);
+                } else {
+                    if (y1 < state.cy) y2 = Math.min(y2, state.cy - hw);
+                    else y1 = Math.max(y1, state.cy + hw);
                 }
-
-                if (drawLen > 0) {
-                    ctx.moveTo(x1, y1);
-                    ctx.lineTo(x1 + ux * drawLen, y1 + uy * drawLen);
-                    ctx.stroke();
-                }
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+                ctx.setLineDash([]);
             }
 
-            // Center lines (Solid double yellow for India)
-            ctx.strokeStyle = COLORS.yellowLine;
+            ctx.strokeStyle = COLORS.median;
             ctx.lineWidth = 2;
-            // Horizontal
-            drawLineWithGap(0, state.cy - 2, state.cx - hw, state.cy - 2, false);
-            drawLineWithGap(0, state.cy + 2, state.cx - hw, state.cy + 2, false);
-            drawLineWithGap(state.cx + hw, state.cy - 2, state.width, state.cy - 2, false);
-            drawLineWithGap(state.cx + hw, state.cy + 2, state.width, state.cy + 2, false);
-            // Vertical
-            drawLineWithGap(state.cx - 2, 0, state.cx - 2, state.cy - hw, false);
-            drawLineWithGap(state.cx + 2, 0, state.cx + 2, state.cy - hw, false);
-            drawLineWithGap(state.cx - 2, state.cy + hw, state.cx - 2, state.height, false);
-            drawLineWithGap(state.cx + 2, state.cy + hw, state.cx + 2, state.height, false);
+            gapLine(0, state.cy - 2, state.cx - hw, state.cy - 2, false);
+            gapLine(0, state.cy + 2, state.cx - hw, state.cy + 2, false);
+            gapLine(state.cx + hw, state.cy - 2, state.width, state.cy - 2, false);
+            gapLine(state.cx + hw, state.cy + 2, state.width, state.cy + 2, false);
+            gapLine(state.cx - 2, 0, state.cx - 2, state.cy - hw, false);
+            gapLine(state.cx + 2, 0, state.cx + 2, state.cy - hw, false);
+            gapLine(state.cx - 2, state.cy + hw, state.cx - 2, state.height, false);
+            gapLine(state.cx + 2, state.cy + hw, state.cx + 2, state.height, false);
 
-            // Lane Dividers (Dashed white)
-            ctx.strokeStyle = COLORS.markings;
+            ctx.strokeStyle = COLORS.mark;
             ctx.lineWidth = 2;
             for (let i = 1; i < config.lanesPerDir; i++) {
-                let offset = i * lw;
-                // Horizontal (Top and Bottom)
-                drawLineWithGap(0, state.cy - offset, state.cx - hw, state.cy - offset, true);
-                drawLineWithGap(state.cx + hw, state.cy - offset, state.width, state.cy - offset, true);
-                drawLineWithGap(0, state.cy + offset, state.cx - hw, state.cy + offset, true);
-                drawLineWithGap(state.cx + hw, state.cy + offset, state.width, state.cy + offset, true);
-                // Vertical (Left and Right)
-                drawLineWithGap(state.cx - offset, 0, state.cx - offset, state.cy - hw, true);
-                drawLineWithGap(state.cx - offset, state.cy + hw, state.cx - offset, state.height, true);
-                drawLineWithGap(state.cx + offset, 0, state.cx + offset, state.cy - hw, true);
-                drawLineWithGap(state.cx + offset, state.cy + hw, state.cx + offset, state.height, true);
+                const offset = i * lw;
+                gapLine(0, state.cy - offset, state.cx - hw, state.cy - offset, true);
+                gapLine(state.cx + hw, state.cy - offset, state.width, state.cy - offset, true);
+                gapLine(0, state.cy + offset, state.cx - hw, state.cy + offset, true);
+                gapLine(state.cx + hw, state.cy + offset, state.width, state.cy + offset, true);
+                gapLine(state.cx - offset, 0, state.cx - offset, state.cy - hw, true);
+                gapLine(state.cx - offset, state.cy + hw, state.cx - offset, state.height, true);
+                gapLine(state.cx + offset, 0, state.cx + offset, state.cy - hw, true);
+                gapLine(state.cx + offset, state.cy + hw, state.cx + offset, state.height, true);
             }
 
-            ctx.setLineDash([]); // Reset dash
-
-            // White edge lines
-            ctx.strokeStyle = '#e2e8f0';
+            ctx.strokeStyle = COLORS.edge;
             ctx.lineWidth = 3;
-            // Horizontal edges
             ctx.beginPath();
             ctx.moveTo(0, state.cy - hw); ctx.lineTo(state.cx - hw, state.cy - hw);
             ctx.moveTo(state.cx + hw, state.cy - hw); ctx.lineTo(state.width, state.cy - hw);
             ctx.moveTo(0, state.cy + hw); ctx.lineTo(state.cx - hw, state.cy + hw);
             ctx.moveTo(state.cx + hw, state.cy + hw); ctx.lineTo(state.width, state.cy + hw);
-            ctx.stroke();
-
-            // Vertical edges
-            ctx.beginPath();
             ctx.moveTo(state.cx - hw, 0); ctx.lineTo(state.cx - hw, state.cy - hw);
             ctx.moveTo(state.cx - hw, state.cy + hw); ctx.lineTo(state.cx - hw, state.height);
             ctx.moveTo(state.cx + hw, 0); ctx.lineTo(state.cx + hw, state.cy - hw);
             ctx.moveTo(state.cx + hw, state.cy + hw); ctx.lineTo(state.cx + hw, state.height);
             ctx.stroke();
 
-            // Draw Free Left Turn slip lane guides
-            ctx.strokeStyle = '#475569';
-            ctx.lineWidth = 2;
             ctx.setLineDash([8, 12]);
-            const rTurn = 16;
-            ctx.beginPath(); ctx.arc(state.cx - 64, state.cy - 64, rTurn, 0, Math.PI/2); ctx.stroke();
-            ctx.beginPath(); ctx.arc(state.cx + 64, state.cy - 64, rTurn, Math.PI/2, Math.PI); ctx.stroke();
-            ctx.beginPath(); ctx.arc(state.cx + 64, state.cy + 64, rTurn, Math.PI, Math.PI*1.5); ctx.stroke();
-            ctx.beginPath(); ctx.arc(state.cx - 64, state.cy + 64, rTurn, Math.PI*1.5, Math.PI*2); ctx.stroke();
+            ctx.strokeStyle = "rgba(148, 163, 184, 0.75)";
+            ctx.lineWidth = 2;
+            const r = 16;
+            ctx.beginPath(); ctx.arc(state.cx - 64, state.cy - 64, r, 0, Math.PI / 2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(state.cx + 64, state.cy - 64, r, Math.PI / 2, Math.PI); ctx.stroke();
+            ctx.beginPath(); ctx.arc(state.cx + 64, state.cy + 64, r, Math.PI, Math.PI * 1.5); ctx.stroke();
+            ctx.beginPath(); ctx.arc(state.cx - 64, state.cy + 64, r, Math.PI * 1.5, Math.PI * 2); ctx.stroke();
             ctx.setLineDash([]);
 
-            // Draw Stop Lines (Left Hand Drive = Left side of approach)
+            const heat = state.metrics.corridors;
+            const boxes = {
+                [DIR.NORTH]: { x: state.cx - 24, y: state.cy + hw + 12, w: 48, h: 90 },
+                [DIR.SOUTH]: { x: state.cx - 24, y: state.cy - hw - 102, w: 48, h: 90 },
+                [DIR.EAST]: { x: state.cx - hw - 102, y: state.cy - 24, w: 90, h: 48 },
+                [DIR.WEST]: { x: state.cx + hw + 12, y: state.cy - 24, w: 90, h: 48 }
+            };
+
+            for (const dir of DIRECTIONS) {
+                const rect = boxes[dir];
+                const intensity = clamp(heat[dir].pressure / 16, 0, 1);
+                ctx.fillStyle = `rgba(251, 113, 133, ${0.12 + intensity * 0.25})`;
+                ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+                if (state.activeEmergencyRequest && state.activeEmergencyRequest.direction === dir) {
+                    ctx.strokeStyle = "rgba(253, 224, 71, 0.85)";
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(rect.x - 2, rect.y - 2, rect.w + 4, rect.h + 4);
+                }
+            }
+
+            ctx.strokeStyle = "#f8fafc";
             ctx.lineWidth = 6;
-            ctx.strokeStyle = '#f8fafc';
-            
-            // Eastbound (Approaching from West, TOP side)
-            ctx.beginPath(); ctx.moveTo(state.cx - hw, state.cy - hw); ctx.lineTo(state.cx - hw, state.cy); ctx.stroke();
-            // Westbound (Approaching from East, BOTTOM side)
-            ctx.beginPath(); ctx.moveTo(state.cx + hw, state.cy); ctx.lineTo(state.cx + hw, state.cy + hw); ctx.stroke();
-            // Northbound (Approaching from South, LEFT side)
-            ctx.beginPath(); ctx.moveTo(state.cx - hw, state.cy + hw); ctx.lineTo(state.cx, state.cy + hw); ctx.stroke();
-            // Southbound (Approaching from North, RIGHT side)
-            ctx.beginPath(); ctx.moveTo(state.cx, state.cy - hw); ctx.lineTo(state.cx + hw, state.cy - hw); ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(state.cx - hw, state.cy - hw); ctx.lineTo(state.cx - hw, state.cy);
+            ctx.moveTo(state.cx + hw, state.cy); ctx.lineTo(state.cx + hw, state.cy + hw);
+            ctx.moveTo(state.cx - hw, state.cy + hw); ctx.lineTo(state.cx, state.cy + hw);
+            ctx.moveTo(state.cx, state.cy - hw); ctx.lineTo(state.cx + hw, state.cy - hw);
+            ctx.stroke();
         }
 
         function drawTrafficLights() {
-            const hw = config.roadWidth / 2 + 18; // Offset from corner
+            const offset = config.roadWidth / 2 + 18;
 
-            function drawLightHousings(x, y, rotation) {
+            function housing(x, y, rotation) {
                 ctx.save();
                 ctx.translate(x, y);
                 ctx.rotate(rotation);
-                
-                // Box
-                ctx.fillStyle = '#111827';
-                ctx.fillRect(-6, -20, 12, 40);
-                ctx.strokeStyle = '#374151';
-                ctx.lineWidth = 1;
-                ctx.strokeRect(-6, -20, 12, 40);
-                
+                ctx.fillStyle = "#0f172a";
+                ctx.fillRect(-7, -21, 14, 42);
+                ctx.strokeStyle = "rgba(148, 163, 184, 0.25)";
+                ctx.strokeRect(-7, -21, 14, 42);
                 ctx.restore();
             }
 
-            function drawBulb(x, y, colorStr, isOn) {
+            function bulb(x, y, color, active) {
                 ctx.beginPath();
-                ctx.arc(x, y, 4, 0, Math.PI * 2);
-                if (isOn) {
-                    ctx.fillStyle = colorStr;
-                    ctx.shadowColor = colorStr;
-                    ctx.shadowBlur = 15;
-                    ctx.fill();
-                    // Inner bright core
-                    ctx.fillStyle = '#ffffff';
-                    ctx.shadowBlur = 0;
-                    ctx.beginPath(); ctx.arc(x, y, 1.5, 0, Math.PI * 2); ctx.fill();
-                } else {
-                    ctx.fillStyle = '#374151'; // off state
-                    ctx.shadowBlur = 0;
-                    ctx.fill();
-                }
-                ctx.shadowBlur = 0; // reset
+                ctx.arc(x, y, 4.3, 0, Math.PI * 2);
+                ctx.fillStyle = active ? color : "#334155";
+                ctx.shadowColor = active ? color : "transparent";
+                ctx.shadowBlur = active ? 16 : 0;
+                ctx.fill();
+                ctx.shadowBlur = 0;
             }
 
-            // Draw housings at 4 corners
-            drawLightHousings(state.cx - hw, state.cy - hw, 0); // NW
-            drawLightHousings(state.cx + hw, state.cy - hw, Math.PI/2); // NE
-            drawLightHousings(state.cx + hw, state.cy + hw, Math.PI); // SE
-            drawLightHousings(state.cx - hw, state.cy + hw, -Math.PI/2); // SW
+            housing(state.cx - offset, state.cy - offset, 0);
+            housing(state.cx + offset, state.cy - offset, Math.PI / 2);
+            housing(state.cx + offset, state.cy + offset, Math.PI);
+            housing(state.cx - offset, state.cy + offset, -Math.PI / 2);
 
-            const lights = trafficLights.lights;
+            const east = trafficLights.lights[DIR.EAST];
+            bulb(state.cx - offset, state.cy - offset - 10, COLORS.red, east === LIGHT.RED);
+            bulb(state.cx - offset, state.cy - offset, COLORS.yellow, east === LIGHT.YELLOW);
+            bulb(state.cx - offset, state.cy - offset + 10, COLORS.green, east === LIGHT.GREEN);
 
-            // NW Light faces West and controls Eastbound traffic
-            let ewState = lights[DIR.EAST];
-            drawBulb(state.cx - hw, state.cy - hw - 10, COLORS.redLight, ewState === LIGHT.RED);
-            drawBulb(state.cx - hw, state.cy - hw, COLORS.yellowLight, ewState === LIGHT.YELLOW);
-            drawBulb(state.cx - hw, state.cy - hw + 10, COLORS.greenLight, ewState === LIGHT.GREEN);
+            const west = trafficLights.lights[DIR.WEST];
+            bulb(state.cx + offset, state.cy + offset + 10, COLORS.red, west === LIGHT.RED);
+            bulb(state.cx + offset, state.cy + offset, COLORS.yellow, west === LIGHT.YELLOW);
+            bulb(state.cx + offset, state.cy + offset - 10, COLORS.green, west === LIGHT.GREEN);
 
-            // SE Light faces East and controls Westbound traffic
-            let wbState = lights[DIR.WEST];
-            drawBulb(state.cx + hw, state.cy + hw + 10, COLORS.redLight, wbState === LIGHT.RED);
-            drawBulb(state.cx + hw, state.cy + hw, COLORS.yellowLight, wbState === LIGHT.YELLOW);
-            drawBulb(state.cx + hw, state.cy + hw - 10, COLORS.greenLight, wbState === LIGHT.GREEN);
+            const south = trafficLights.lights[DIR.SOUTH];
+            bulb(state.cx + offset + 10, state.cy - offset, COLORS.red, south === LIGHT.RED);
+            bulb(state.cx + offset, state.cy - offset, COLORS.yellow, south === LIGHT.YELLOW);
+            bulb(state.cx + offset - 10, state.cy - offset, COLORS.green, south === LIGHT.GREEN);
 
-            // NE Light faces North and controls Southbound traffic
-            let sbState = lights[DIR.SOUTH];
-            drawBulb(state.cx + hw + 10, state.cy - hw, COLORS.redLight, sbState === LIGHT.RED);
-            drawBulb(state.cx + hw, state.cy - hw, COLORS.yellowLight, sbState === LIGHT.YELLOW);
-            drawBulb(state.cx + hw - 10, state.cy - hw, COLORS.greenLight, sbState === LIGHT.GREEN);
-
-            // SW Light faces South and controls Northbound traffic
-            let nbState = lights[DIR.NORTH];
-            drawBulb(state.cx - hw - 10, state.cy + hw, COLORS.redLight, nbState === LIGHT.RED);
-            drawBulb(state.cx - hw, state.cy + hw, COLORS.yellowLight, nbState === LIGHT.YELLOW);
-            drawBulb(state.cx - hw + 10, state.cy + hw, COLORS.greenLight, nbState === LIGHT.GREEN);
+            const north = trafficLights.lights[DIR.NORTH];
+            bulb(state.cx - offset - 10, state.cy + offset, COLORS.red, north === LIGHT.RED);
+            bulb(state.cx - offset, state.cy + offset, COLORS.yellow, north === LIGHT.YELLOW);
+            bulb(state.cx - offset + 10, state.cy + offset, COLORS.green, north === LIGHT.GREEN);
         }
 
-        function attemptSpawn() {
-            // Pick a random direction and lane
-            const dir = Math.floor(Math.random() * 4);
-            const lane = Math.floor(Math.random() * config.lanesPerDir);
-            
-            // Calculate absolute spawn coordinates
-            let startX, startY;
-            const offset = (config.lanesPerDir - lane - 0.5) * config.laneWidth;
-            switch (dir) {
-                case DIR.EAST: startX = -config.carLength; startY = state.cy - offset; break;
-                case DIR.WEST: startX = state.width + config.carLength; startY = state.cy + offset; break;
-                case DIR.SOUTH: startX = state.cx + offset; startY = -config.carLength; break;
-                case DIR.NORTH: startX = state.cx - offset; startY = state.height + config.carLength; break;
-            }
+        function drawCommunicationOverlay() {
+            for (const vehicle of state.vehicles) {
+                if (!vehicle.priority || vehicle.state === "DONE" || !vehicle.emergencyProfile) continue;
+                const radius = vehicle.emergencyProfile.broadcastRadius * 0.45;
+                const pulse = 0.22 + Math.abs(Math.sin(state.time / 260)) * 0.12;
 
-            // Check if 2D space around spawn point is clear to prevent spawn overlap
-            let clear = true;
-            for (let v of state.vehicles) {
-                let dx = v.x - startX;
-                let dy = v.y - startY;
-                // Require a buffer of 1.5 car lengths for a safe spawn
-                if (Math.sqrt(dx*dx + dy*dy) < config.carLength * 1.5) {
-                    clear = false;
-                    break;
-                }
-            }
-
-            if (clear) {
-                state.vehicles.push(new Vehicle(dir, lane));
-            }
-        }
-
-        function updateSimulation(dt) {
-            if (state.paused) return;
-
-            trafficLights.update(dt);
-
-            // Spawning Logic
-            // Scale spawn probability based on rate (lower rate value = faster spawns)
-            // Example: spawnRate = 10 means 10% chance per frame. 
-            // Normalize the slider (10 to 200) to a reasonable probability.
-            const spawnProb = 1.0 / (state.spawnRate / 5); 
-            if (Math.random() < spawnProb) {
-                attemptSpawn();
-            }
-
-            // Update Vehicles
-            for (let i = state.vehicles.length - 1; i >= 0; i--) {
-                let v = state.vehicles[i];
-                v.maxSpeed = state.maxSpeed; // Live update max speed from controls
-                v.update();
-                
-                if (v.isOffScreen()) {
-                    state.vehicles.splice(i, 1);
-                }
+                ctx.save();
+                ctx.setLineDash([12, 10]);
+                ctx.strokeStyle = `rgba(56, 189, 248, ${pulse})`;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(vehicle.x, vehicle.y, radius, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                ctx.restore();
             }
         }
 
         function drawSimulation() {
             drawRoads();
-            
-            // Sort vehicles by Y position to pseudo-handle z-indexing (cars lower down draw on top)
-            // Actually, since there are no collisions, drawing order doesn't matter much.
-            state.vehicles.forEach(v => v.draw(ctx));
-
+            for (const vehicle of state.vehicles) vehicle.draw();
+            drawCommunicationOverlay();
             drawTrafficLights();
         }
 
-        function loop(timestamp) {
-            const dt = timestamp - state.lastTime;
-            state.lastTime = timestamp;
+        function updateDashboard() {
+            document.getElementById("val-spawn").textContent = demandText(state.demandIntensity);
+            document.getElementById("val-cycle").textContent = `${(state.lightCycleTime / 1000).toFixed(1)} s`;
+            document.getElementById("val-speed").textContent = `${Math.round(state.maxSpeed * 12)} km/h`;
 
-            // Calculate FPS
-            state.frameCount++;
-            if (state.frameCount % 10 === 0) {
-                state.fps = Math.round(1000 / (dt || 16));
-                document.getElementById('stat-fps').innerText = state.fps;
-                document.getElementById('stat-count').innerText = state.vehicles.length;
+            document.getElementById("metric-live").textContent = String(state.metrics.liveVehicles);
+            document.getElementById("metric-throughput").textContent = String(state.metrics.throughputPerMin);
+            document.getElementById("metric-wait").textContent = `${(state.metrics.averageWaitMs / 1000).toFixed(1)} s`;
+            document.getElementById("metric-speed").textContent = `${Math.round(state.metrics.averageSpeedKmh)} km/h`;
+            document.getElementById("metric-congestion").textContent = String(Math.round(state.metrics.congestionIndex));
+            document.getElementById("metric-completed").textContent = String(state.metrics.completedTrips);
+            document.getElementById("metric-emergency").textContent = String(state.metrics.emergencyTrips);
+            document.getElementById("metric-links").textContent = String(state.metrics.v2vLinks);
+            document.getElementById("log-samples").textContent = String(state.analytics.timeline.length);
+            document.getElementById("log-events").textContent = String(state.analytics.events.length);
+            document.getElementById("log-window").textContent =
+                state.analytics.timeline.length
+                    ? `${Math.round(
+                        state.analytics.timeline[state.analytics.timeline.length - 1].simTimeSec -
+                        state.analytics.timeline[0].simTimeSec
+                    )} s`
+                    : "0 s";
+            document.getElementById("log-export").textContent =
+                state.analytics.exportedAt === null ? "Never" : `${state.analytics.exportedAt.toFixed(1)} s`;
+            document.getElementById("log-last").textContent =
+                state.analytics.events.length
+                    ? state.analytics.events[state.analytics.events.length - 1].summary
+                    : "Logging constraints and results for graph-ready export.";
+
+            const modeNode = document.getElementById("status-mode");
+            modeNode.textContent = state.controlMode === "adaptive" ? "Adaptive" : "Fixed";
+            modeNode.classList.toggle("fixed", state.controlMode === "fixed");
+
+            document.getElementById("status-active").textContent = fullLabel(trafficLights.currentDir);
+            document.getElementById("status-next").textContent = fullLabel(trafficLights.nextDir);
+            document.getElementById("status-priority").textContent =
+                state.emergencyDirection === null ? "None" : fullLabel(state.emergencyDirection);
+            document.getElementById("status-emergency").textContent = emergencyLabel(state.emergencyType);
+            document.getElementById("status-action").textContent =
+                state.emergencyAction ? actionLabel(state.emergencyAction) : "None";
+            document.getElementById("status-links").textContent = String(state.network.v2vLinks);
+            document.getElementById("status-yield").textContent = String(state.network.yieldingVehicles);
+            document.getElementById("status-timer").textContent = `${(trafficLights.timer / 1000).toFixed(1)} s`;
+            document.getElementById("status-phase").textContent =
+                trafficLights.phase === "all-red"
+                    ? "All-Red"
+                    : trafficLights.phase[0].toUpperCase() + trafficLights.phase.slice(1);
+            document.getElementById("status-note").textContent = state.network.controlNote;
+
+            if (state.activeEmergencyRequest) {
+                document.getElementById("banner-title").textContent =
+                    `${emergencyLabel(state.activeEmergencyRequest.type)} priority is active`;
+                document.getElementById("banner-text").textContent =
+                    `${actionLabel(state.activeEmergencyRequest.action)} on the ${shortLabel(state.activeEmergencyRequest.direction).toLowerCase()} corridor. ${state.network.controlNote}`;
+            } else {
+                document.getElementById("banner-title").textContent =
+                    state.controlMode === "adaptive" ? "Adaptive urban traffic control is live" : "Fixed-cycle traffic control is live";
+                document.getElementById("banner-text").textContent =
+                    state.controlMode === "adaptive"
+                        ? "The controller is balancing queue pressure, wait time, V2V signals, and corridor demand across the junction."
+                        : "The controller is serving every corridor on a fixed-time cycle.";
             }
 
+            for (const dir of DIRECTIONS) {
+                const id = corridorId(dir);
+                const corridor = state.metrics.corridors[dir];
+                document.getElementById(`${id}-score`).textContent = String(Math.round(corridor.pressure));
+                document.getElementById(`${id}-queue`).textContent = `Queue ${corridor.queue}`;
+                document.getElementById(`${id}-wait`).textContent = `Wait ${(corridor.avgWaitMs / 1000).toFixed(1)} s`;
+                const bar = document.getElementById(`${id}-bar`);
+                bar.style.width = `${clamp(corridor.pressure * 6.6, 4, 100)}%`;
+                bar.classList.toggle("priority", state.emergencyDirection === dir);
+            }
+        }
+
+        function updateSimulation(dt) {
+            if (state.paused) return;
+            state.time += dt;
+            computeMetrics();
+            buildCommunicationNetwork();
+            trafficLights.update(dt, state.metrics.corridors);
+
+            if (state.priorityPending && state.emergencyDirection !== null && state.emergencyType && state.emergencyAction) {
+                const vehicle = attemptSpawn({
+                    direction: state.emergencyDirection,
+                    lane: 1,
+                    emergencyType: state.emergencyType,
+                    emergencyAction: state.emergencyAction
+                });
+                state.priorityPending = !vehicle;
+                if (vehicle) state.priorityVehicleId = vehicle.id;
+            }
+
+            if (Math.random() < spawnProbability()) attemptSpawn();
+
+            for (let i = state.vehicles.length - 1; i >= 0; i--) {
+                const vehicle = state.vehicles[i];
+                vehicle.update(dt);
+                if (vehicle.isOffScreen()) {
+                    recordCompletion(vehicle);
+                    state.vehicles.splice(i, 1);
+                }
+            }
+
+            computeMetrics();
+            buildCommunicationNetwork();
+            if (
+                state.emergencyDirection !== null &&
+                !state.priorityPending &&
+                !state.vehicles.some(vehicle => vehicle.priority && vehicle.id === state.priorityVehicleId)
+            ) {
+                clearPriorityState();
+            }
+
+            captureAnalyticsSample();
+        }
+
+        function loop(timestamp) {
+            const dt = state.lastTime ? timestamp - state.lastTime : 16;
+            state.lastTime = timestamp;
             updateSimulation(dt);
             drawSimulation();
-
+            updateDashboard();
             requestAnimationFrame(loop);
         }
 
-        // --- Initialization & UI Binding ---
-        function init() {
-            window.addEventListener('resize', resize);
-            resize();
-
-            // Bind UI Elements
-            const uiPanel = document.getElementById('ui-panel');
-            const toggleUiBtn = document.getElementById('toggle-ui');
-            const showUiBtn = document.getElementById('show-ui');
-
-            toggleUiBtn.addEventListener('click', () => {
-                uiPanel.classList.add('-translate-x-[120%]');
-                setTimeout(() => showUiBtn.classList.remove('hidden'), 300);
+        function bindUi() {
+            const emergencyTypeSelect = document.getElementById("emergency-type");
+            const emergencyActionSelect = document.getElementById("emergency-action");
+            document.getElementById("profile-select").addEventListener("change", event => {
+                setProfile(event.target.value);
+                logEvent("profile_changed", `Demand profile changed to ${event.target.value}.`, {
+                    profile: event.target.value
+                });
             });
-
-            showUiBtn.addEventListener('click', () => {
-                showUiBtn.classList.add('hidden');
-                uiPanel.classList.remove('-translate-x-[120%]');
+            document.getElementById("mode-select").addEventListener("change", event => {
+                state.controlMode = event.target.value;
+                logEvent("control_mode_changed", `Signal strategy changed to ${event.target.value}.`, {
+                    controlMode: event.target.value
+                });
             });
-
-            const spawnSlider = document.getElementById('spawn-rate');
-            const valSpawn = document.getElementById('val-spawn');
-            spawnSlider.addEventListener('input', (e) => {
-                // Invert logic: lower slider value -> higher probability
-                const val = parseInt(e.target.value);
-                state.spawnRate = 210 - val; 
-                let text = "Medium";
-                if (val > 150) text = "High";
-                else if (val < 60) text = "Low";
-                valSpawn.innerText = text;
+            document.getElementById("spawn-rate").addEventListener("input", event => { state.demandIntensity = Number(event.target.value); });
+            document.getElementById("cycle-time").addEventListener("input", event => { state.lightCycleTime = Number(event.target.value); });
+            document.getElementById("max-speed").addEventListener("input", event => { state.maxSpeed = Number(event.target.value); });
+            document.getElementById("spawn-rate").addEventListener("change", event => {
+                logEvent("demand_changed", "Demand intensity changed.", {
+                    demandIntensity: Number(event.target.value)
+                });
             });
-
-            const cycleSlider = document.getElementById('cycle-time');
-            const valCycle = document.getElementById('val-cycle');
-            cycleSlider.addEventListener('input', (e) => {
-                state.lightCycleTime = parseInt(e.target.value);
-                valCycle.innerText = (state.lightCycleTime / 1000) + 's';
+            document.getElementById("cycle-time").addEventListener("change", event => {
+                logEvent("cycle_changed", "Base green window changed.", {
+                    lightCycleTime: Number(event.target.value)
+                });
             });
-
-            const speedSlider = document.getElementById('max-speed');
-            const valSpeed = document.getElementById('val-speed');
-            speedSlider.addEventListener('input', (e) => {
-                state.maxSpeed = parseFloat(e.target.value);
-                valSpeed.innerText = Math.round(state.maxSpeed * 12) + ' km/h'; // Arbitrary scale for realism
+            document.getElementById("max-speed").addEventListener("change", event => {
+                logEvent("speed_changed", "Fleet speed cap changed.", {
+                    maxSpeedKmh: Math.round(Number(event.target.value) * 12)
+                });
             });
-
-            const btnPause = document.getElementById('btn-pause');
-            btnPause.addEventListener('click', () => {
+            emergencyTypeSelect.addEventListener("change", event => {
+                emergencyActionSelect.value = DEFAULT_ACTION_BY_TYPE[event.target.value];
+                logEvent("emergency_type_selected", `Emergency type selected: ${event.target.value}.`, {
+                    emergencyType: event.target.value,
+                    suggestedAction: DEFAULT_ACTION_BY_TYPE[event.target.value]
+                });
+            });
+            emergencyActionSelect.addEventListener("change", event => {
+                logEvent("emergency_action_selected", `Emergency action selected: ${event.target.value}.`, {
+                    emergencyAction: event.target.value
+                });
+            });
+            document.getElementById("btn-dispatch").addEventListener("click", dispatchEmergency);
+            document.getElementById("btn-reset-priority").addEventListener("click", () => {
+                clearPriorityState();
+                computeMetrics();
+                buildCommunicationNetwork();
+                captureAnalyticsSample(true);
+            });
+            document.getElementById("btn-export-json").addEventListener("click", () => exportAnalytics("json"));
+            document.getElementById("btn-export-csv").addEventListener("click", () => exportAnalytics("csv"));
+            document.getElementById("btn-reset-logs").addEventListener("click", () => {
+                resetAnalytics(true);
+                captureAnalyticsSample(true);
+            });
+            document.getElementById("btn-snapshot").addEventListener("click", () => {
+                logEvent("manual_snapshot", "Manual analytics snapshot captured.", {
+                    liveVehicles: state.metrics.liveVehicles,
+                    congestionIndex: Number(state.metrics.congestionIndex.toFixed(2))
+                });
+                captureAnalyticsSample(true);
+            });
+            document.getElementById("btn-graph-page").addEventListener("click", () => {
+                logEvent("graph_page_opened", "Standalone analytics graph page opened.");
+                persistAnalyticsFeed(true);
+                const graphWindow = window.open("traffic-analytics.html", "_blank", "noopener");
+                if (!graphWindow) {
+                    window.location.href = "traffic-analytics.html";
+                }
+            });
+            document.getElementById("btn-pause").addEventListener("click", () => {
                 state.paused = !state.paused;
-                btnPause.innerText = state.paused ? 'Resume' : 'Pause';
-                btnPause.classList.toggle('bg-blue-600');
-                btnPause.classList.toggle('bg-green-600');
-                btnPause.classList.toggle('shadow-blue-500/30');
-                btnPause.classList.toggle('shadow-green-500/30');
+                document.getElementById("btn-pause").textContent = state.paused ? "Resume Simulation" : "Pause Simulation";
+                logEvent(state.paused ? "simulation_paused" : "simulation_resumed", state.paused ? "Simulation paused." : "Simulation resumed.");
+                persistAnalyticsFeed(true);
             });
-
-            document.getElementById('btn-clear').addEventListener('click', () => {
+            document.getElementById("btn-clear").addEventListener("click", () => {
                 state.vehicles = [];
+                state.metrics.completedTrips = 0;
+                state.metrics.emergencyTrips = 0;
+                state.metrics.throughputEvents = [];
+                logEvent("vehicles_reset", "All vehicles were cleared from the simulation.");
+                clearPriorityState();
+                computeMetrics();
+                buildCommunicationNetwork();
+                captureAnalyticsSample(true);
             });
+        }
 
-            // Initial Spawn to make it look active immediately
-            for(let i=0; i<15; i++) attemptSpawn();
-
+        function init() {
+            resize();
+            bindUi();
+            setProfile(state.demandProfile);
+            document.getElementById("emergency-action").value = DEFAULT_ACTION_BY_TYPE.ambulance;
+            resetAnalytics(false);
+            logEvent("simulation_started", "Simulation initialized with analytics logging enabled.", {
+                demandProfile: state.demandProfile,
+                controlMode: state.controlMode
+            });
+            for (let i = 0; i < 18; i++) attemptSpawn();
+            computeMetrics();
+            buildCommunicationNetwork();
+            captureAnalyticsSample(true);
+            window.addEventListener("resize", resize);
             requestAnimationFrame(loop);
         }
 
-        // Start
         window.onload = init;
-
     </script>
 </body>
 </html>
