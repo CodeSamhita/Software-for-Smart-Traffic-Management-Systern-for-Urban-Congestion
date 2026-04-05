@@ -233,6 +233,11 @@
                 yieldingVehicles: 0,
                 controlNote: "Adaptive auto-timing controller is balancing queues and arrivals."
             },
+            governor: {
+                ingressScale: 1,
+                congestionTrend: 0,
+                lastCongestionIndex: 0
+            },
             ai: {
                 enabled: false,
                 rememberKey: false,
@@ -421,6 +426,15 @@
             bindSafe(node, eventName, handler);
             return node;
         }
+        function setPauseButtonLabel(paused) {
+            const node = nodeById("btn-pause");
+            if (!node) return;
+            if (paused) {
+                node.innerHTML = '<i class="fa-solid fa-play me-2"></i>Resume';
+            } else {
+                node.innerHTML = '<i class="fa-solid fa-pause me-2"></i>Pause';
+            }
+        }
         function currentFlowMode() {
             return FLOW_MODES[state.flowMode] || FLOW_MODES.smooth;
         }
@@ -467,8 +481,8 @@
         }
 
         function updateRandomEmergencyUi() {
-            const toggle = document.getElementById("random-emergency-enabled");
-            const note = document.getElementById("random-emergency-note");
+            const toggle = nodeById("random-emergency-enabled");
+            const note = nodeById("random-emergency-note");
             if (!toggle || !note) return;
 
             toggle.disabled = !smartActionsEnabled();
@@ -491,11 +505,11 @@
         }
 
         function updateSmartActionsUi() {
-            const toggle = document.getElementById("disable-smart-actions");
-            const note = document.getElementById("smart-actions-note");
-            const dispatch = document.getElementById("btn-dispatch");
-            const clearPriority = document.getElementById("btn-reset-priority");
-            const modeSelect = document.getElementById("mode-select");
+            const toggle = nodeById("disable-smart-actions");
+            const note = nodeById("smart-actions-note");
+            const dispatch = nodeById("btn-dispatch");
+            const clearPriority = nodeById("btn-reset-priority");
+            const modeSelect = nodeById("mode-select");
             const smartDisabled = state.smartActionsDisabled;
 
             if (toggle) toggle.checked = smartDisabled;
@@ -525,7 +539,7 @@
                 state.randomEmergencyTimerMs = 0;
                 clearPriorityState();
                 state.network.controlNote = defaultControlNote();
-                const priorityNote = document.getElementById("priority-note");
+                const priorityNote = nodeById("priority-note");
                 if (priorityNote) {
                     priorityNote.textContent =
                         "Manual override is active. Emergency smart dispatch and preemption are currently disabled.";
@@ -548,19 +562,19 @@
         }
 
         function updateAiUi() {
-            const enabledToggle = document.getElementById("ai-enabled");
-            const rememberToggle = document.getElementById("ai-remember");
-            const keyInput = document.getElementById("ai-key");
-            const modelSelect = document.getElementById("ai-model");
-            const note = document.getElementById("ai-note");
-            const status = document.getElementById("ai-status");
-            const output = document.getElementById("ai-output");
+            const enabledToggle = nodeById("ai-enabled");
+            const rememberToggle = nodeById("ai-remember");
+            const keyInput = nodeById("ai-key");
+            const modelSelect = nodeById("ai-model");
+            const note = nodeById("ai-note");
+            const status = nodeById("ai-status");
+            const output = nodeById("ai-output");
             const actionButtons = [
-                document.getElementById("btn-ai-analyze"),
-                document.getElementById("btn-ai-forecast"),
-                document.getElementById("btn-ai-optimize")
+                nodeById("btn-ai-analyze"),
+                nodeById("btn-ai-forecast"),
+                nodeById("btn-ai-optimize")
             ].filter(Boolean);
-            const applyButton = document.getElementById("btn-ai-apply");
+            const applyButton = nodeById("btn-ai-apply");
             const keyReady = state.ai.apiKey.trim().startsWith("sk-");
             const smartReady = smartActionsEnabled();
 
@@ -960,8 +974,8 @@
             const nextBaseGreen = clamp(plan.targetBaseGreenMs, 3000, 12000);
             state.controlMode = nextMode;
             state.lightCycleTime = nextBaseGreen;
-            document.getElementById("mode-select").value = nextMode;
-            document.getElementById("cycle-time").value = String(nextBaseGreen);
+            setValueSafe("mode-select", nextMode);
+            setValueSafe("cycle-time", String(nextBaseGreen));
             state.ai.lastStatus = "Applied: AI timing plan updated the signal strategy and base green window.";
             state.ai.lastOutput = [
                 state.ai.lastOutput,
@@ -1527,6 +1541,18 @@
                     } else if (context.effectiveLight === LIGHT.GREEN && loadIndex > 0.58 && context.distToStop < 95) {
                         target = Math.min(target, context.freeFlow * clamp(0.62 + (1 - loadIndex) * 0.45, 0.5, 0.92));
                     }
+                }
+
+                if (
+                    context.effectiveLight === LIGHT.GREEN &&
+                    vehicle.state === "STRAIGHT" &&
+                    vehicle.routeChoice === "straight" &&
+                    context.distToStop > -16 &&
+                    context.distToStop < 95 &&
+                    loadIndex > 0.52
+                ) {
+                    const clearanceFloor = context.freeFlow * clamp(0.54 + loadIndex * 0.22, 0.52, 0.76);
+                    target = Math.max(target, clearanceFloor);
                 }
 
                 if (vehicle.state === "TURNING") {
@@ -2791,6 +2817,32 @@
             return "Critical";
         }
 
+        function updateTrafficGovernor(dt = 16.6667) {
+            const queueSum = DIRECTIONS.reduce((sum, dir) => sum + (state.metrics.corridors[dir]?.queue || 0), 0);
+            const pressurePeak = DIRECTIONS.reduce((peak, dir) => Math.max(peak, state.metrics.corridors[dir]?.pressure || 0), 0);
+            const congestion = clamp(state.metrics.congestionIndex, 0, 100);
+            const throughput = clamp(state.metrics.throughputPerMin, 0, 120);
+            const pressureIndex = clamp(pressurePeak / 18, 0, 1);
+            const queueIndex = clamp(queueSum / 18, 0, 1);
+            const throughputRelief = clamp(throughput / 48, 0, 1);
+
+            const targetIngress = clamp(
+                1
+                - congestion / 100 * 0.44
+                - queueIndex * 0.34
+                - pressureIndex * 0.18
+                + throughputRelief * 0.22,
+                0.34,
+                1.08
+            );
+
+            const smoothing = clamp(dt / 1800, 0.04, 0.2);
+            const current = state.governor.ingressScale;
+            state.governor.ingressScale = clamp(current + (targetIngress - current) * smoothing, 0.34, 1.08);
+            state.governor.congestionTrend = congestion - state.governor.lastCongestionIndex;
+            state.governor.lastCongestionIndex = congestion;
+        }
+
         function spawnProbability(dt = 16.6667) {
             const flow = currentFlowMode();
             const congestion = clamp(state.metrics.congestionIndex / 100, 0, 1);
@@ -2803,6 +2855,7 @@
             const frameChance =
                 (0.0035 + (state.demandIntensity / 220) * 0.022) *
                 flow.spawnScale *
+                state.governor.ingressScale *
                 congestionDamping *
                 queueDamping *
                 liveDamping *
@@ -2818,11 +2871,28 @@
         }
 
         function pickDirection() {
+            const congestion = state.metrics.congestionIndex;
+            const dynamicWeights = {};
             let total = 0;
-            for (const dir of DIRECTIONS) total += state.demandWeights[dir];
-            let roll = Math.random() * total;
             for (const dir of DIRECTIONS) {
-                roll -= state.demandWeights[dir];
+                const baseWeight = state.demandWeights[dir];
+                const corridor = state.metrics.corridors[dir] || { queue: 0, pressure: 0 };
+                let damping = 1;
+                if (congestion >= 65) {
+                    damping = clamp(
+                        1.34 -
+                        corridor.queue * 0.11 -
+                        corridor.pressure * 0.03,
+                        0.22,
+                        1.2
+                    );
+                }
+                dynamicWeights[dir] = Math.max(0.08, baseWeight * damping);
+                total += dynamicWeights[dir];
+            }
+            let roll = Math.random() * Math.max(0.001, total);
+            for (const dir of DIRECTIONS) {
+                roll -= dynamicWeights[dir];
                 if (roll <= 0) return dir;
             }
             return DIRECTIONS[0];
@@ -2852,7 +2922,7 @@
 
         function attemptSpawn(options = {}) {
             const direction = options.direction ?? pickDirection();
-            const lane = options.lane ?? (Math.random() < 0.34 ? 0 : 1);
+            const lane = options.lane ?? (Math.random() < 0.5 ? 0 : 1);
             return spawnVehicle(direction, lane, options);
         }
 
@@ -2879,8 +2949,8 @@
             state.priorityVehicleId = null;
             state.activeEmergencyRequest = null;
             state.network.controlNote = defaultControlNote();
-            document.getElementById("priority-dir").value = "";
-            document.getElementById("priority-note").textContent = "No emergency priority is currently requested.";
+            setValueSafe("priority-dir", "");
+            setTextSafe("priority-note", "No emergency priority is currently requested.");
             updateRandomEmergencyUi();
             if (hadEmergency) {
                 logEvent("priority_cleared", "Emergency priority was cleared.", {
@@ -2891,17 +2961,16 @@
 
         function requestEmergencyDispatch({ direction, type, action, source = "manual" }) {
             if (!smartActionsEnabled()) {
-                document.getElementById("priority-note").textContent =
-                    "Manual override is active. Turn off Disable Smart Actions before dispatching emergency priority.";
+                setTextSafe("priority-note", "Manual override is active. Turn off Disable Smart Actions before dispatching emergency priority.");
                 return null;
             }
             state.emergencyDirection = direction;
             state.emergencyType = type;
             state.emergencyAction = action;
 
-            document.getElementById("priority-dir").value = String(direction);
-            document.getElementById("emergency-type").value = type;
-            document.getElementById("emergency-action").value = action;
+            setValueSafe("priority-dir", String(direction));
+            setValueSafe("emergency-type", type);
+            setValueSafe("emergency-action", action);
 
             const vehicle = attemptSpawn({
                 direction,
@@ -2924,15 +2993,16 @@
             };
 
             const sourcePrefix = source === "random" ? "Random incident: " : "";
-            document.getElementById("priority-note").textContent = vehicle
+            const noteText = vehicle
                 ? `${sourcePrefix}${emergencyLabel(type)} dispatched on the ${shortLabel(direction).toLowerCase()} corridor with ${actionLabel(action).toLowerCase()}.`
                 : `${sourcePrefix}${emergencyLabel(type)} queued on the ${shortLabel(direction).toLowerCase()} corridor while the controller pre-clears the junction.`;
+            setTextSafe("priority-note", noteText);
 
             logEvent(
                 source === "random"
                     ? (vehicle ? "random_emergency_dispatch" : "random_emergency_queued")
                     : (vehicle ? "emergency_dispatch" : "emergency_queued"),
-                document.getElementById("priority-note").textContent,
+                noteText,
                 {
                     direction: shortLabel(direction),
                     type,
@@ -2964,19 +3034,23 @@
 
         function dispatchEmergency() {
             if (!smartActionsEnabled()) {
-                document.getElementById("priority-note").textContent =
-                    "Manual override is active. Emergency smart dispatch is currently blocked.";
+                setTextSafe("priority-note", "Manual override is active. Emergency smart dispatch is currently blocked.");
                 return;
             }
-            const value = document.getElementById("priority-dir").value;
+            const priorityNode = nodeById("priority-dir");
+            if (!priorityNode) {
+                setTextSafe("priority-note", "Priority corridor control is unavailable in this theme.");
+                return;
+            }
+            const value = priorityNode.value;
             if (value === "") {
-                document.getElementById("priority-note").textContent = "Choose a corridor before dispatching an emergency vehicle.";
+                setTextSafe("priority-note", "Choose a corridor before dispatching an emergency vehicle.");
                 return;
             }
 
             const direction = Number(value);
-            const type = document.getElementById("emergency-type").value;
-            const action = document.getElementById("emergency-action").value;
+            const type = (nodeById("emergency-type") || {}).value || "ambulance";
+            const action = (nodeById("emergency-action") || {}).value || "priority";
             requestEmergencyDispatch({ direction, type, action, source: "manual" });
         }
 
@@ -3178,8 +3252,10 @@
 
         function resolveVehicleOverlaps() {
             const flow = currentFlowMode();
-            const minBase = config.carLength * 0.95 * flow.junctionCautionScale;
-            for (let pass = 0; pass < 2; pass += 1) {
+            const congestionScale = clamp(1 + state.metrics.congestionIndex / 220, 1, 1.46);
+            const minBase = config.carLength * 0.92 * flow.junctionCautionScale * congestionScale;
+            const passes = state.metrics.congestionIndex >= 76 ? 3 : 2;
+            for (let pass = 0; pass < passes; pass += 1) {
                 for (let i = 0; i < state.vehicles.length; i += 1) {
                     const a = state.vehicles[i];
                     if (a.state === "DONE") continue;
@@ -3215,10 +3291,10 @@
                             const bPos = b.getPos();
                             const leader = aPos >= bPos ? a : b;
                             const follower = leader === a ? b : a;
-                            follower.speed = Math.min(follower.speed, leader.speed * 0.78);
+                            follower.speed = Math.min(follower.speed, leader.speed * 0.84);
                         } else {
-                            a.speed *= 0.92;
-                            b.speed *= 0.92;
+                            a.speed *= 0.9;
+                            b.speed *= 0.9;
                         }
                     }
                 }
@@ -3244,6 +3320,12 @@
             const smartEnabled = smartActionsEnabled();
             const adaptiveActive = adaptiveControllerActive();
             const flowLabel = currentFlowMode().label;
+            const ingressScalePct = Math.round(state.governor.ingressScale * 100);
+            const trendLabel = state.governor.congestionTrend > 0.8
+                ? "Rising"
+                : state.governor.congestionTrend < -0.8
+                    ? "Falling"
+                    : "Stable";
             const flowNoteNode = nodeById("flow-note");
             if (flowNoteNode) flowNoteNode.textContent = flowModeNote();
             setTextSafe("val-spawn", demandText(state.demandIntensity));
@@ -3251,11 +3333,14 @@
             setTextSafe("val-speed", `${Math.round(state.maxSpeed * 12)} km/h`);
             setTextSafe(
                 "cycle-note",
-                adaptiveActive
-                    ? `${flowLabel} tuning is active. Auto timing is using ${(autoBaseMs / 1000).toFixed(1)} s live base and ${(liveTargetMs / 1000).toFixed(1)} s current target to prevent queue buildup.`
-                    : smartEnabled
-                        ? `${flowLabel} tuning is active. Fixed mode keeps the same green window while serving one corridor at a time.`
-                        : "Manual override keeps all smart actions off and runs a fixed-cycle signal sequence."
+                (
+                    adaptiveActive
+                        ? `${flowLabel} tuning is active. Auto timing is using ${(autoBaseMs / 1000).toFixed(1)} s live base and ${(liveTargetMs / 1000).toFixed(1)} s current target to prevent queue buildup.`
+                        : smartEnabled
+                            ? `${flowLabel} tuning is active. Fixed mode keeps the same green window while serving one corridor at a time.`
+                            : "Manual override keeps all smart actions off and runs a fixed-cycle signal sequence."
+                )
+                + ` Ingress governor: ${ingressScalePct}% (${trendLabel}).`
             );
 
             setTextSafe("metric-live", String(state.metrics.liveVehicles));
@@ -3323,7 +3408,7 @@
             setTextSafe("status-auto-base", `${(autoBaseMs / 1000).toFixed(1)} s`);
             setTextSafe("status-band", congestionBandLabel(telemetry.congestionBand || congestionBandKey(state.metrics.congestionIndex)));
             setTextSafe("status-queue-total", String(telemetry.totalQueue || 0));
-            setTextSafe("status-note", state.network.controlNote);
+            setTextSafe("status-note", `${state.network.controlNote} Ingress governor ${ingressScalePct}% (${trendLabel}).`);
 
             if (state.activeEmergencyRequest) {
                 setTextSafe("banner-title", `${emergencyLabel(state.activeEmergencyRequest.type)} priority is active`);
@@ -3369,6 +3454,7 @@
             if (state.paused) return;
             state.time += dt;
             computeMetrics();
+            updateTrafficGovernor(dt);
             buildCommunicationNetwork();
             trafficLights.update(dt, state.metrics.corridors);
 
@@ -3383,7 +3469,11 @@
                 if (vehicle) state.priorityVehicleId = vehicle.id;
             }
 
-            if (Math.random() < spawnProbability(dt)) attemptSpawn();
+            const congestion = state.metrics.congestionIndex;
+            const liveCap = congestion >= 90 ? 72 : congestion >= 78 ? 86 : 108;
+            if (state.metrics.liveVehicles < liveCap && Math.random() < spawnProbability(dt)) {
+                attemptSpawn();
+            }
 
             for (let i = state.vehicles.length - 1; i >= 0; i--) {
                 const vehicle = state.vehicles[i];
@@ -3419,30 +3509,30 @@
         }
 
         function bindUi() {
-            const modeSelect = document.getElementById("mode-select");
-            const profileSelect = document.getElementById("profile-select");
-            const flowModeSelect = document.getElementById("flow-mode");
-            const spawnRate = document.getElementById("spawn-rate");
-            const cycleTime = document.getElementById("cycle-time");
-            const maxSpeed = document.getElementById("max-speed");
-            const emergencyTypeSelect = document.getElementById("emergency-type");
-            const emergencyActionSelect = document.getElementById("emergency-action");
-            const randomEmergencyEnabled = document.getElementById("random-emergency-enabled");
-            const smartActionsToggle = document.getElementById("disable-smart-actions");
+            const modeSelect = nodeById("mode-select");
+            const profileSelect = nodeById("profile-select");
+            const flowModeSelect = nodeById("flow-mode");
+            const spawnRate = nodeById("spawn-rate");
+            const cycleTime = nodeById("cycle-time");
+            const maxSpeed = nodeById("max-speed");
+            const emergencyTypeSelect = nodeById("emergency-type");
+            const emergencyActionSelect = nodeById("emergency-action");
+            const randomEmergencyEnabled = nodeById("random-emergency-enabled");
+            const smartActionsToggle = nodeById("disable-smart-actions");
 
-            modeSelect.addEventListener("change", event => {
+            bindSafe(modeSelect, "change", event => {
                 state.controlMode = event.target.value === "fixed" ? "fixed" : "adaptive";
                 state.network.controlNote = defaultControlNote();
                 logEvent("mode_changed", "Signal control mode updated.", { mode: state.controlMode });
             });
 
-            profileSelect.addEventListener("change", event => {
+            bindSafe(profileSelect, "change", event => {
                 setProfile(event.target.value);
                 logEvent("profile_changed", "Demand profile updated.", { profile: state.demandProfile });
             });
 
             if (flowModeSelect) {
-                flowModeSelect.addEventListener("change", event => {
+                bindSafe(flowModeSelect, "change", event => {
                     const nextMode = String(event.target.value || "smooth");
                     state.flowMode = Object.prototype.hasOwnProperty.call(FLOW_MODES, nextMode) ? nextMode : "smooth";
                     state.network.controlNote = defaultControlNote();
@@ -3452,32 +3542,31 @@
                 });
             }
 
-            spawnRate.addEventListener("input", event => {
+            bindSafe(spawnRate, "input", event => {
                 state.demandIntensity = Number(event.target.value);
             });
 
-            cycleTime.addEventListener("input", event => {
+            bindSafe(cycleTime, "input", event => {
                 state.lightCycleTime = Number(event.target.value);
             });
 
-            maxSpeed.addEventListener("input", event => {
+            bindSafe(maxSpeed, "input", event => {
                 state.maxSpeed = Number(event.target.value);
             });
 
-            emergencyTypeSelect.addEventListener("change", event => {
+            bindSafe(emergencyTypeSelect, "change", event => {
                 const type = event.target.value;
                 const recommendedAction = DEFAULT_ACTION_BY_TYPE[type] || "priority";
-                emergencyActionSelect.value = recommendedAction;
+                if (emergencyActionSelect) emergencyActionSelect.value = recommendedAction;
             });
 
-            emergencyActionSelect.addEventListener("change", () => {
-                const type = emergencyTypeSelect.value;
-                const action = emergencyActionSelect.value;
-                document.getElementById("priority-note").textContent =
-                    `${emergencyLabel(type)} will use ${actionLabel(action).toLowerCase()} when dispatched.`;
+            bindSafe(emergencyActionSelect, "change", () => {
+                const type = emergencyTypeSelect ? emergencyTypeSelect.value : "ambulance";
+                const action = emergencyActionSelect ? emergencyActionSelect.value : "priority";
+                setTextSafe("priority-note", `${emergencyLabel(type)} will use ${actionLabel(action).toLowerCase()} when dispatched.`);
             });
 
-            randomEmergencyEnabled.addEventListener("change", event => {
+            bindSafe(randomEmergencyEnabled, "change", event => {
                 if (!smartActionsEnabled()) {
                     event.target.checked = false;
                     state.randomEmergencyEnabled = false;
@@ -3493,22 +3582,22 @@
                     { enabled: state.randomEmergencyEnabled }
                 );
             });
-            smartActionsToggle.addEventListener("change", event => {
+            bindSafe(smartActionsToggle, "change", event => {
                 setSmartActionsDisabled(Boolean(event.target.checked), "toggle");
             });
 
-            document.getElementById("btn-dispatch").addEventListener("click", dispatchEmergency);
-            document.getElementById("btn-reset-priority").addEventListener("click", clearPriorityState);
+            bindSafeById("btn-dispatch", "click", dispatchEmergency);
+            bindSafeById("btn-reset-priority", "click", clearPriorityState);
 
-            document.getElementById("btn-pause").addEventListener("click", event => {
+            bindSafeById("btn-pause", "click", event => {
                 state.paused = !state.paused;
-                event.currentTarget.textContent = state.paused ? "Resume Simulation" : "Pause Simulation";
+                setPauseButtonLabel(state.paused);
                 logEvent("simulation_pause_toggle", state.paused ? "Simulation paused." : "Simulation resumed.", {
                     paused: state.paused
                 });
             });
 
-            document.getElementById("btn-clear").addEventListener("click", () => {
+            bindSafeById("btn-clear", "click", () => {
                 state.vehicles = [];
                 state.network.v2vLinks = 0;
                 state.network.yieldingVehicles = 0;
@@ -3519,55 +3608,55 @@
                 logEvent("vehicles_cleared", "All active vehicles were reset by the operator.");
             });
 
-            document.getElementById("btn-export-json").addEventListener("click", () => exportAnalytics("json"));
-            document.getElementById("btn-export-csv").addEventListener("click", () => exportAnalytics("csv"));
-            document.getElementById("btn-reset-logs").addEventListener("click", () => resetAnalytics(true));
-            document.getElementById("btn-snapshot").addEventListener("click", () => {
+            bindSafeById("btn-export-json", "click", () => exportAnalytics("json"));
+            bindSafeById("btn-export-csv", "click", () => exportAnalytics("csv"));
+            bindSafeById("btn-reset-logs", "click", () => resetAnalytics(true));
+            bindSafeById("btn-snapshot", "click", () => {
                 captureAnalyticsSample(true);
                 logEvent("snapshot_logged", "Operator requested an immediate analytics snapshot.");
             });
-            document.getElementById("btn-graph-page").addEventListener("click", () => {
+            bindSafeById("btn-graph-page", "click", () => {
                 window.open("traffic-analytics.html", "_blank", "noopener");
             });
 
-            const aiEnabled = document.getElementById("ai-enabled");
-            const aiRemember = document.getElementById("ai-remember");
-            const aiKey = document.getElementById("ai-key");
-            const aiModel = document.getElementById("ai-model");
+            const aiEnabled = nodeById("ai-enabled");
+            const aiRemember = nodeById("ai-remember");
+            const aiKey = nodeById("ai-key");
+            const aiModel = nodeById("ai-model");
 
-            aiEnabled.addEventListener("change", event => {
+            bindSafe(aiEnabled, "change", event => {
                 state.ai.enabled = Boolean(event.target.checked);
                 if (!state.ai.enabled) state.ai.busy = false;
                 persistAiSessionConfig();
                 updateAiUi();
             });
 
-            aiRemember.addEventListener("change", event => {
+            bindSafe(aiRemember, "change", event => {
                 state.ai.rememberKey = Boolean(event.target.checked);
                 if (!state.ai.rememberKey) {
                     state.ai.apiKey = "";
-                    aiKey.value = "";
+                    if (aiKey) aiKey.value = "";
                 }
                 persistAiSessionConfig();
                 updateAiUi();
             });
 
-            aiKey.addEventListener("input", event => {
+            bindSafe(aiKey, "input", event => {
                 state.ai.apiKey = event.target.value.trim();
                 if (state.ai.rememberKey) persistAiSessionConfig();
                 updateAiUi();
             });
 
-            aiModel.addEventListener("change", event => {
+            bindSafe(aiModel, "change", event => {
                 state.ai.model = event.target.value === "gpt-5.4" ? "gpt-5.4" : "gpt-5-mini";
                 persistAiSessionConfig();
                 updateAiUi();
             });
 
-            document.getElementById("btn-ai-analyze").addEventListener("click", () => requestAiRecommendation("analyze"));
-            document.getElementById("btn-ai-forecast").addEventListener("click", () => requestAiRecommendation("forecast"));
-            document.getElementById("btn-ai-optimize").addEventListener("click", () => requestAiRecommendation("optimize"));
-            document.getElementById("btn-ai-apply").addEventListener("click", applyAiPlan);
+            bindSafeById("btn-ai-analyze", "click", () => requestAiRecommendation("analyze"));
+            bindSafeById("btn-ai-forecast", "click", () => requestAiRecommendation("forecast"));
+            bindSafeById("btn-ai-optimize", "click", () => requestAiRecommendation("optimize"));
+            bindSafeById("btn-ai-apply", "click", applyAiPlan);
         }
 
         function init() {
@@ -3583,15 +3672,15 @@
             updateRandomEmergencyUi();
             updateAiUi();
 
-            document.getElementById("profile-select").value = state.demandProfile;
-            document.getElementById("mode-select").value = state.controlMode;
-            const flowModeSelect = document.getElementById("flow-mode");
+            setValueSafe("profile-select", state.demandProfile);
+            setValueSafe("mode-select", state.controlMode);
+            const flowModeSelect = nodeById("flow-mode");
             if (flowModeSelect) flowModeSelect.value = state.flowMode;
-            document.getElementById("disable-smart-actions").checked = state.smartActionsDisabled;
-            document.getElementById("spawn-rate").value = String(state.demandIntensity);
-            document.getElementById("cycle-time").value = String(state.lightCycleTime);
-            document.getElementById("max-speed").value = String(state.maxSpeed);
-            document.getElementById("btn-pause").textContent = "Pause Simulation";
+            setCheckedSafe("disable-smart-actions", state.smartActionsDisabled);
+            setValueSafe("spawn-rate", String(state.demandIntensity));
+            setValueSafe("cycle-time", String(state.lightCycleTime));
+            setValueSafe("max-speed", String(state.maxSpeed));
+            setPauseButtonLabel(false);
 
             logEvent("simulation_started", "Simulation initialized with analytics logging enabled.", {
                 demandProfile: state.demandProfile,
@@ -3604,6 +3693,7 @@
 
             for (let i = 0; i < 18; i += 1) attemptSpawn();
             computeMetrics();
+            updateTrafficGovernor(16.6667);
             buildCommunicationNetwork();
             updateDashboard();
             captureAnalyticsSample(true);

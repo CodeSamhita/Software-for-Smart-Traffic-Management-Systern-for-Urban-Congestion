@@ -41,22 +41,13 @@ canvas#sim-canvas {
     min-width: 1400px;
     height: 100vh;
     z-index: 0;
+    pointer-events: none;
 }
 
-/* UI Overlay Passthrough for interactive canvas underneath */
+/* Keep full UI interactivity after theme changes */
 #ui-layer {
     position: relative;
     z-index: 10;
-    pointer-events: none;
-}
-#ui-layer .glass-panel,
-#ui-layer .glass-nav,
-#ui-layer #banner,
-#ui-layer .btn,
-#ui-layer .form-check-input,
-#ui-layer .form-select,
-#ui-layer .form-range,
-#ui-layer input {
     pointer-events: auto;
 }
 

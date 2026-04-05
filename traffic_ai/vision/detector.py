@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+import os
+from pathlib import Path
 from typing import Iterable
 
 import numpy as np
@@ -100,6 +102,7 @@ class YoloDetector(BaseDetector):
         except Exception as exc:
             raise DetectorError(f"Unable to load YOLO model '{model_path}': {exc}") from exc
 
+        self.name = f"ultralytics-yolo:{Path(str(model_path)).name}"
         self.confidence = confidence
         self.iou = iou
         self.classes_of_interest = {normalize_label(item) for item in classes_of_interest}
@@ -147,15 +150,60 @@ class YoloDetector(BaseDetector):
         return detections
 
 
+def _detector_candidates(config: object) -> list[str]:
+    candidates: list[str] = []
+    seen: set[str] = set()
+
+    def add(value: str | None) -> None:
+        if value is None:
+            return
+        item = str(value).strip()
+        if not item:
+            return
+        key = item.lower()
+        if key in seen:
+            return
+        seen.add(key)
+        candidates.append(item)
+
+    add(getattr(config, "detector_model_path", ""))
+
+    fallback_env = os.getenv("VISION_MODEL_FALLBACKS", "").strip()
+    if fallback_env:
+        for item in fallback_env.split(","):
+            add(item)
+
+    project_root = Path(getattr(config, "project_root", Path.cwd()))
+    for local_name in ("yolo26n.pt", "yolo26s.pt", "yolov8n.pt"):
+        local_path = project_root / local_name
+        if local_path.exists():
+            add(str(local_path.resolve()))
+
+    for name in ("yolo26n.pt", "yolo26s.pt", "yolov8n.pt"):
+        add(name)
+
+    return candidates
+
+
 def build_detector(config: object) -> BaseDetector:
     """Build the best available detector for the runtime."""
-    try:
-        return YoloDetector(
-            model_path=str(getattr(config, "detector_model_path")),
-            confidence=float(getattr(config, "detector_confidence")),
-            iou=float(getattr(config, "detector_iou")),
-            classes_of_interest=getattr(config, "classes_of_interest"),
-        )
-    except Exception as exc:
-        logger.warning("Falling back to OpenCV motion detector: %s", exc)
-        return MotionDetector()
+    confidence = float(getattr(config, "detector_confidence"))
+    iou = float(getattr(config, "detector_iou"))
+    classes_of_interest = getattr(config, "classes_of_interest")
+    errors: list[str] = []
+
+    for model_path in _detector_candidates(config):
+        try:
+            return YoloDetector(
+                model_path=model_path,
+                confidence=confidence,
+                iou=iou,
+                classes_of_interest=classes_of_interest,
+            )
+        except Exception as exc:
+            errors.append(f"{model_path}: {exc}")
+            logger.warning("Detector candidate failed (%s). Trying next fallback.", model_path)
+
+    if errors:
+        logger.warning("Falling back to OpenCV motion detector after model failures: %s", errors[0])
+    return MotionDetector()

@@ -36,6 +36,14 @@ DEFAULT_CANDIDATES_BY_FAMILY = {
     "yolo-nas": ("yolo_nas_l.pt", "yolo_nas_m.pt", "yolo_nas_s.pt"),
     "yolov8": ("yolov8x.pt", "yolov8l.pt", "yolov8m.pt", "yolov8s.pt", "yolov8n.pt"),
 }
+FAMILY_ALIAS_DEFAULT = {
+    "yolo26": "yolo26.pt",
+    "yoloe": "yoloe-s.pt",
+    "yolo-world": "yolov8s-worldv2.pt",
+    "rtdetr": "rtdetr-l.pt",
+    "yolo-nas": "yolo_nas_m.pt",
+    "yolov8": "yolov8n.pt",
+}
 
 
 @dataclass(slots=True)
@@ -157,8 +165,9 @@ def _resolve_requested_model(project_root: Path, requested: str | None) -> str |
     normalized = requested.strip()
     if not normalized:
         return None
-    if normalized.lower() == "yolo26":
-        normalized = "yolo26.pt"
+    lowered = normalized.lower()
+    if lowered in FAMILY_ALIAS_DEFAULT:
+        normalized = FAMILY_ALIAS_DEFAULT[lowered]
 
     as_path = Path(normalized)
     if as_path.is_absolute():
@@ -354,13 +363,29 @@ def _select_auto_detector(
     profile: SystemProfile,
     priority: str,
 ) -> tuple[str, str]:
-    for family in DETECTION_MODEL_FAMILIES:
+    if priority == "speed":
+        family_order = ("yolo26", "yolov8", "yoloe", "yolo-world", "rtdetr", "yolo-nas")
+    elif priority == "quality":
+        family_order = ("yolo26", "yoloe", "rtdetr", "yolo-world", "yolo-nas", "yolov8")
+    elif profile.tier == "low":
+        family_order = ("yolo26", "yolov8", "yoloe", "yolo-world", "rtdetr", "yolo-nas")
+    else:
+        family_order = DETECTION_MODEL_FAMILIES
+
+    for family in family_order:
         local_candidates = [path for path in local_weights if _family_match(family, path.name)]
         if not local_candidates:
             continue
         chosen = _pick_best_candidate([str(path) for path in local_candidates], profile, priority)
         return (chosen, f"auto-local:{family}")
-    return ("", "auto-no-local")
+
+    for family in family_order:
+        defaults = list(DEFAULT_CANDIDATES_BY_FAMILY.get(family, ()))
+        if not defaults:
+            continue
+        chosen = _pick_best_candidate(defaults, profile, priority)
+        return (chosen, f"auto-default:{family}")
+    return ("", "auto-no-candidate")
 
 
 def select_detector_model(

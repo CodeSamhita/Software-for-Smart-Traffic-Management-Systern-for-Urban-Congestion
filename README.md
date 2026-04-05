@@ -87,7 +87,7 @@ python .\run_traffic_ai.py --model-family yolo26 --model-priority quality
 python .\run_traffic_ai.py --vision-model .\yolo26m.pt --show-config
 ```
 
-The launcher now profiles CPU, RAM, and GPU capability and auto-picks the best available detector model for the system. If local YOLO26 weights are present, those are preferred.
+The launcher now profiles CPU, RAM, and GPU capability and auto-picks a detector family and size for the system. Auto mode prioritizes YOLO26, then uses family defaults when local weights are not available, and finally falls back across safe detector candidates before switching to OpenCV motion detection.
 
 The bootstrap script installs any missing Python packages from `requirements.txt` before starting Flask.
 
@@ -182,7 +182,13 @@ if (criticalDelay) targetGreen += 700;
 ### 2. Vehicle Spawn Probability
 Determines continuous and random generation rates per frame limit:
 ```javascript
-let frameChance = 0.004 + (state.demandIntensity / 220) * 0.026;
+let frameChance =
+    (0.0035 + (state.demandIntensity / 220) * 0.022)
+    * flow.spawnScale
+    * state.governor.ingressScale
+    * congestionDamping
+    * queueDamping
+    * liveDamping;
 let dt_adjusted_chance = 1 - Math.pow(1 - frameChance, Math.max(0.35, dt / 16.6667));
 ```
 
@@ -209,5 +215,11 @@ if (distance <= config.broadcastRadius) {
 ### 5. Congestion Index Rating
 Normalized score used by the adaptive manager to shift controller modes (0-100 scale):
 ```javascript
-state.metrics.congestionIndex = totalQueue * 9 + averageWaitMs / 220 + liveVehicles * 0.8 - averageSpeedKmh * 0.24;
+const throughputRelief = throughputPerMin * 0.62;
+state.metrics.congestionIndex =
+    totalQueue * 7.2 +
+    averageWaitMs / 300 +
+    liveVehicles * 0.56 -
+    averageSpeedKmh * 0.32 -
+    throughputRelief;
 ```
