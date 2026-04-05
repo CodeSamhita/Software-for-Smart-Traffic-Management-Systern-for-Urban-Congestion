@@ -3244,112 +3244,123 @@
             const smartEnabled = smartActionsEnabled();
             const adaptiveActive = adaptiveControllerActive();
             const flowLabel = currentFlowMode().label;
-            const flowNoteNode = document.getElementById("flow-note");
+            const flowNoteNode = nodeById("flow-note");
             if (flowNoteNode) flowNoteNode.textContent = flowModeNote();
-            document.getElementById("val-spawn").textContent = demandText(state.demandIntensity);
-            document.getElementById("val-cycle").textContent = `${(state.lightCycleTime / 1000).toFixed(1)} s`;
-            document.getElementById("val-speed").textContent = `${Math.round(state.maxSpeed * 12)} km/h`;
-            document.getElementById("cycle-note").textContent =
+            setTextSafe("val-spawn", demandText(state.demandIntensity));
+            setTextSafe("val-cycle", `${(state.lightCycleTime / 1000).toFixed(1)} s`);
+            setTextSafe("val-speed", `${Math.round(state.maxSpeed * 12)} km/h`);
+            setTextSafe(
+                "cycle-note",
                 adaptiveActive
                     ? `${flowLabel} tuning is active. Auto timing is using ${(autoBaseMs / 1000).toFixed(1)} s live base and ${(liveTargetMs / 1000).toFixed(1)} s current target to prevent queue buildup.`
                     : smartEnabled
                         ? `${flowLabel} tuning is active. Fixed mode keeps the same green window while serving one corridor at a time.`
-                        : "Manual override keeps all smart actions off and runs a fixed-cycle signal sequence.";
+                        : "Manual override keeps all smart actions off and runs a fixed-cycle signal sequence."
+            );
 
-            document.getElementById("metric-live").textContent = String(state.metrics.liveVehicles);
-            document.getElementById("metric-throughput").textContent = String(state.metrics.throughputPerMin);
-            document.getElementById("metric-wait").textContent = `${(state.metrics.averageWaitMs / 1000).toFixed(1)} s`;
-            document.getElementById("metric-speed").textContent = `${Math.round(state.metrics.averageSpeedKmh)} km/h`;
-            document.getElementById("metric-congestion").textContent = String(Math.round(state.metrics.congestionIndex));
-            document.getElementById("metric-completed").textContent = String(state.metrics.completedTrips);
-            document.getElementById("metric-emergency").textContent = String(state.metrics.emergencyTrips);
-            document.getElementById("metric-links").textContent = String(state.metrics.v2vLinks);
-            document.getElementById("log-samples").textContent = String(state.analytics.timeline.length);
-            document.getElementById("log-events").textContent = String(state.analytics.events.length);
-            document.getElementById("log-window").textContent =
+            setTextSafe("metric-live", String(state.metrics.liveVehicles));
+            setTextSafe("metric-throughput", String(state.metrics.throughputPerMin));
+            setTextSafe("metric-wait", `${(state.metrics.averageWaitMs / 1000).toFixed(1)} s`);
+            setTextSafe("metric-speed", `${Math.round(state.metrics.averageSpeedKmh)} km/h`);
+            setTextSafe("metric-congestion", String(Math.round(state.metrics.congestionIndex)));
+            setTextSafe("metric-completed", String(state.metrics.completedTrips));
+            setTextSafe("metric-emergency", String(state.metrics.emergencyTrips));
+            setTextSafe("metric-links", String(state.metrics.v2vLinks));
+            setTextSafe("log-samples", String(state.analytics.timeline.length));
+            setTextSafe("log-events", String(state.analytics.events.length));
+            setTextSafe(
+                "log-window",
                 state.analytics.timeline.length
                     ? `${Math.round(
                         state.analytics.timeline[state.analytics.timeline.length - 1].simTimeSec -
                         state.analytics.timeline[0].simTimeSec
                     )} s`
-                    : "0 s";
-            document.getElementById("log-export").textContent =
-                state.analytics.exportedAt === null ? "Never" : `${state.analytics.exportedAt.toFixed(1)} s`;
-            document.getElementById("log-storage").textContent = state.analytics.storageStatus;
-            document.getElementById("log-stored").textContent =
-                `${state.analytics.storedSampleCount} / ${state.analytics.storedEventCount}`;
-            document.getElementById("log-last").textContent =
+                    : "0 s"
+            );
+            setTextSafe("log-export", state.analytics.exportedAt === null ? "Never" : `${state.analytics.exportedAt.toFixed(1)} s`);
+            setTextSafe("log-storage", state.analytics.storageStatus);
+            setTextSafe("log-stored", `${state.analytics.storedSampleCount} / ${state.analytics.storedEventCount}`);
+            setTextSafe(
+                "log-last",
                 state.analytics.events.length
                     ? state.analytics.events[state.analytics.events.length - 1].summary
-                    : "Logging constraints and results with permanent storage for graph-ready export.";
+                    : "Logging constraints and results with permanent storage for graph-ready export."
+            );
             updateRandomEmergencyUi();
             updateSmartActionsUi();
 
-            const modeNode = document.getElementById("status-mode");
-            modeNode.textContent = !smartEnabled ? "Manual" : adaptiveActive ? "Adaptive" : "Fixed";
-            modeNode.classList.toggle("fixed", !smartEnabled || state.controlMode === "fixed");
+            const modeNode = nodeById("status-mode");
+            if (modeNode) {
+                modeNode.textContent = !smartEnabled ? "Manual" : adaptiveActive ? "Adaptive" : "Fixed";
+                modeNode.classList.toggle("fixed", !smartEnabled || state.controlMode === "fixed");
+            }
 
-            document.getElementById("status-active").textContent = fullLabel(trafficLights.currentDir);
-            document.getElementById("status-next").textContent = fullLabel(trafficLights.nextDir);
-            document.getElementById("status-priority").textContent =
-                state.emergencyDirection === null ? "None" : fullLabel(state.emergencyDirection);
-            document.getElementById("status-emergency").textContent = emergencyLabel(state.emergencyType);
-            document.getElementById("status-action").textContent =
-                state.emergencyAction ? actionLabel(state.emergencyAction) : "None";
-            document.getElementById("status-links").textContent = String(state.network.v2vLinks);
-            document.getElementById("status-yield").textContent = String(state.network.yieldingVehicles);
-            document.getElementById("status-timer").textContent = `${(trafficLights.timer / 1000).toFixed(1)} s`;
-            document.getElementById("status-phase").textContent =
+            setTextSafe("status-active", fullLabel(trafficLights.currentDir));
+            setTextSafe("status-next", fullLabel(trafficLights.nextDir));
+            setTextSafe("status-priority", state.emergencyDirection === null ? "None" : fullLabel(state.emergencyDirection));
+            setTextSafe("status-emergency", emergencyLabel(state.emergencyType));
+            setTextSafe("status-action", state.emergencyAction ? actionLabel(state.emergencyAction) : "None");
+            setTextSafe("status-links", String(state.network.v2vLinks));
+            setTextSafe("status-yield", String(state.network.yieldingVehicles));
+            setTextSafe("status-timer", `${(trafficLights.timer / 1000).toFixed(1)} s`);
+            setTextSafe(
+                "status-phase",
                 trafficLights.phase === "all-red"
                     ? "All-Red"
-                    : trafficLights.phase[0].toUpperCase() + trafficLights.phase.slice(1);
-            const smartNode = document.getElementById("status-smart");
-            const disciplineNode = document.getElementById("status-discipline");
+                    : trafficLights.phase[0].toUpperCase() + trafficLights.phase.slice(1)
+            );
+            const smartNode = nodeById("status-smart");
+            const disciplineNode = nodeById("status-discipline");
             if (smartNode) {
                 smartNode.textContent = smartEnabled ? "Enabled" : "Disabled";
                 smartNode.classList.toggle("off", !smartEnabled);
             }
             if (disciplineNode) {
-                disciplineNode.textContent = smartEnabled ? "Active" : "Bypassed";
+                disciplineNode.textContent = disciplineManager.ruleSummary();
                 disciplineNode.classList.toggle("off", !smartEnabled);
             }
-            document.getElementById("status-target").textContent = `${(liveTargetMs / 1000).toFixed(1)} s`;
-            document.getElementById("status-auto-base").textContent = `${(autoBaseMs / 1000).toFixed(1)} s`;
-            document.getElementById("status-band").textContent = congestionBandLabel(
-                telemetry.congestionBand || congestionBandKey(state.metrics.congestionIndex)
-            );
-            document.getElementById("status-queue-total").textContent = String(telemetry.totalQueue || 0);
-            document.getElementById("status-note").textContent = state.network.controlNote;
+            setTextSafe("status-target", `${(liveTargetMs / 1000).toFixed(1)} s`);
+            setTextSafe("status-auto-base", `${(autoBaseMs / 1000).toFixed(1)} s`);
+            setTextSafe("status-band", congestionBandLabel(telemetry.congestionBand || congestionBandKey(state.metrics.congestionIndex)));
+            setTextSafe("status-queue-total", String(telemetry.totalQueue || 0));
+            setTextSafe("status-note", state.network.controlNote);
 
             if (state.activeEmergencyRequest) {
-                document.getElementById("banner-title").textContent =
-                    `${emergencyLabel(state.activeEmergencyRequest.type)} priority is active`;
-                document.getElementById("banner-text").textContent =
-                    `${actionLabel(state.activeEmergencyRequest.action)} on the ${shortLabel(state.activeEmergencyRequest.direction).toLowerCase()} corridor. ${state.network.controlNote}`;
+                setTextSafe("banner-title", `${emergencyLabel(state.activeEmergencyRequest.type)} priority is active`);
+                setTextSafe(
+                    "banner-text",
+                    `${actionLabel(state.activeEmergencyRequest.action)} on the ${shortLabel(state.activeEmergencyRequest.direction).toLowerCase()} corridor. ${state.network.controlNote}`
+                );
             } else {
-                document.getElementById("banner-title").textContent =
+                setTextSafe(
+                    "banner-title",
                     adaptiveActive
                         ? "Adaptive urban traffic control is live"
                         : smartEnabled
                             ? "Fixed-cycle traffic control is live"
-                            : "Manual override mode is live";
-                document.getElementById("banner-text").textContent =
+                            : "Manual override mode is live"
+                );
+                setTextSafe(
+                    "banner-text",
                     adaptiveActive
                         ? "The controller is auto-adjusting green windows from queue pressure, wait time, V2V signals, and corridor demand to prevent congestion."
                         : smartEnabled
                             ? "The controller is serving one corridor at a time on a fixed-time cycle."
-                            : "Smart automation is disabled. Vehicles follow basic fixed-cycle signal behavior only.";
+                            : "Smart automation is disabled. Vehicles follow basic fixed-cycle signal behavior only."
+                );
             }
 
             for (const dir of DIRECTIONS) {
                 const id = corridorId(dir);
                 const corridor = state.metrics.corridors[dir];
-                document.getElementById(`${id}-score`).textContent = String(Math.round(corridor.pressure));
-                document.getElementById(`${id}-queue`).textContent = `Queue ${corridor.queue}`;
-                document.getElementById(`${id}-wait`).textContent = `Wait ${(corridor.avgWaitMs / 1000).toFixed(1)} s`;
-                const bar = document.getElementById(`${id}-bar`);
-                bar.style.width = `${clamp(corridor.pressure * 6.6, 4, 100)}%`;
-                bar.classList.toggle("priority", state.emergencyDirection === dir);
+                setTextSafe(`${id}-score`, String(Math.round(corridor.pressure)));
+                setTextSafe(`${id}-queue`, `Queue ${corridor.queue}`);
+                setTextSafe(`${id}-wait`, `Wait ${(corridor.avgWaitMs / 1000).toFixed(1)} s`);
+                const bar = nodeById(`${id}-bar`);
+                if (bar) {
+                    bar.style.width = `${clamp(corridor.pressure * 6.6, 4, 100)}%`;
+                    bar.classList.toggle("priority", state.emergencyDirection === dir);
+                }
             }
         }
 
