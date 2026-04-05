@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Traffic AI HTML Dashboard</title>
+    <meta name="description" content="Smart Traffic Management System — HTML control dashboard with live feed, source switching, AI suggestions, and corridor analytics.">
+    <title>Smart Traffic AI — Control Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
@@ -12,6 +15,7 @@
             <div class="site-brand">
                 <span class="eyebrow">Smart Traffic Suite</span>
                 <strong>Urban Mobility Command Interface</strong>
+                <span style="font-size:11px;color:#64748b;">HTML Control Dashboard</span>
             </div>
             <nav class="site-nav" aria-label="Primary navigation">
                 <a href="{{ url_for('control_center') }}">Control Center</a>
@@ -307,6 +311,8 @@
             <span>Dashboard view for operations, emergency handling, analytics, and AI-assisted decisions.</span>
         </footer>
     </main>
+
+    <div class="floating-copyright">&copy; 2026 Smart Traffic Management System &nbsp;|&nbsp; Urban Congestion AI Platform</div>
 
     <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
