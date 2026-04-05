@@ -8,6 +8,19 @@
 </head>
 <body>
     <main class="shell">
+        <header class="site-header panel">
+            <div class="site-brand">
+                <span class="eyebrow">Smart Traffic Suite</span>
+                <strong>Operations and Digital Twin Command</strong>
+            </div>
+            <nav class="site-nav" aria-label="Primary navigation">
+                <a href="{{ url_for('control_center') }}">Control Center</a>
+                <a href="{{ url_for('dashboard') }}">Dashboard</a>
+                <a href="{{ url_for('control_center') }}#operator-form">Operator Controls</a>
+                <a href="{{ url_for('control_center') }}#suggestions-list">AI Advisory</a>
+            </nav>
+        </header>
+
         <section class="hero panel">
             <div>
                 <span class="eyebrow">Operations Lab</span>
@@ -35,6 +48,59 @@
                     <strong id="feed-mode-badge">Directional Only</strong>
                     <small id="feed-mode-note">Analysis starts only after North, South, East, or West feeds are added</small>
                 </div>
+            </div>
+        </section>
+
+        <section class="panel guide-card">
+            <div class="guide-head">
+                <h2>Operator Workflow</h2>
+                <p>Use this sequence for stable operations and clear presentation output.</p>
+            </div>
+            <div class="guide-grid">
+                <article class="guide-step">
+                    <strong>1. Assign Feeds</strong>
+                    <p>Set North, South, East, and West sources, then confirm all tiles show active status.</p>
+                </article>
+                <article class="guide-step">
+                    <strong>2. Observe Analytics</strong>
+                    <p>Track congestion, corridor pressure, and AI suggestions before changing controls.</p>
+                </article>
+                <article class="guide-step">
+                    <strong>3. Apply Operation</strong>
+                    <p>Use adaptive or manual mode to drive the digital twin without editing simulation files.</p>
+                </article>
+            </div>
+            <div id="connection-banner" class="connection-banner" data-state="syncing">
+                <span id="connection-dot" class="connection-dot" data-state="syncing"></span>
+                <div class="connection-copy">
+                    <strong id="connection-status">Connecting</strong>
+                    <small id="connection-note">Starting backend link check.</small>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel department-panel">
+            <div class="guide-head">
+                <h2>Department Blocks</h2>
+                <p>These blocks separate ownership areas for operations, emergency handling, and analytics.</p>
+            </div>
+            <div class="department-grid">
+                <article class="department-card">
+                    <strong>Traffic Operations</strong>
+                    <p>Manages lane feed assignment, source switching, and directional analysis quality.</p>
+                </article>
+                <article class="department-card">
+                    <strong>Emergency and Safety</strong>
+                    <p>Uses override corridor and manual priority controls to support urgent interventions.</p>
+                </article>
+                <article class="department-card">
+                    <strong>Simulation and Planning</strong>
+                    <p>Runs the digital twin to validate action impact before field-level policy changes.</p>
+                </article>
+                <article class="department-card">
+                    <strong>AI and Data Team</strong>
+                    <p>Interprets trends, warnings, and recommendation confidence for strategic guidance.</p>
+                </article>
             </div>
         </section>
 
@@ -256,7 +322,7 @@
                         <ul id="suggestions-list" class="bullet-list">
                             <li>Waiting for the first advisory.</li>
                         </ul>
-                        <div id="suggestion-warning" class="warning-box">Risk information will appear here.</div>
+                        <div id="suggestion-warning" class="warning-box" aria-live="polite">Risk information will appear here.</div>
                     </article>
 
                     <article class="panel side-card">
@@ -298,6 +364,7 @@
                         </select>
                         <label for="source-input">Source Value</label>
                         <input id="source-input" name="source_value" type="text" value="{{ config.source_value }}" placeholder="Camera index or absolute path">
+                        <p class="input-help">Camera example: <code>0</code> | File example: <code>D:\traffic\junction.mp4</code></p>
                         <button type="submit" class="primary-button">Apply Source</button>
                     </form>
                     <form id="upload-form" class="stack split-top">
@@ -305,7 +372,7 @@
                         <input id="upload-file" name="file" type="file" accept=".jpg,.jpeg,.png,.bmp,.webp,.mp4,.avi,.mov,.mkv,.wmv,.m4v">
                         <button type="submit" class="secondary-button">Upload And Analyze</button>
                     </form>
-                    <div id="form-feedback" class="feedback">No changes submitted yet.</div>
+                    <div id="form-feedback" class="feedback" aria-live="polite">No changes submitted yet.</div>
                 </article>
 
                 <article class="panel side-card">
@@ -385,7 +452,7 @@
                             <button type="button" class="ghost-button upload-presentation-button" data-slot="west">Upload To West</button>
                         </form>
                     </div>
-                    <div id="presentation-feedback" class="feedback">Lane presentation feeds are ready.</div>
+                    <div id="presentation-feedback" class="feedback" aria-live="polite">Lane presentation feeds are ready.</div>
                 </article>
 
                 <article class="panel side-card">
@@ -479,10 +546,15 @@
                         <button type="button" class="ghost-button priority-button" data-priority="west">Priority West</button>
                         <button type="button" class="ghost-button priority-button" data-priority="none">Release Manual Priority</button>
                     </div>
-                    <div id="operator-feedback" class="feedback">Operator controls are ready.</div>
+                    <div id="operator-feedback" class="feedback" aria-live="polite">Operator controls are ready.</div>
                 </article>
             </aside>
         </section>
+
+        <footer class="site-footer panel-lite">
+            <strong>Smart Traffic Management System</strong>
+            <span>Control center view for lane feeds, operator controls, simulation, and advisory workflows.</span>
+        </footer>
     </main>
 
     <script src="{{ url_for('static', filename='control_center.js') }}"></script>

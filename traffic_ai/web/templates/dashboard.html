@@ -8,6 +8,19 @@
 </head>
 <body>
     <main class="shell">
+        <header class="site-header panel">
+            <div class="site-brand">
+                <span class="eyebrow">Smart Traffic Suite</span>
+                <strong>Urban Mobility Command Interface</strong>
+            </div>
+            <nav class="site-nav" aria-label="Primary navigation">
+                <a href="{{ url_for('control_center') }}">Control Center</a>
+                <a href="{{ url_for('dashboard') }}">Dashboard</a>
+                <a href="{{ url_for('control_center') }}#operator-form">Operations</a>
+                <a href="{{ url_for('dashboard') }}#suggestions-list">AI Advisory</a>
+            </nav>
+        </header>
+
         <section class="hero panel">
             <div>
                 <span class="eyebrow">Interactive HTML Dashboard</span>
@@ -30,6 +43,59 @@
                     <strong id="source-status">Starting</strong>
                     <small id="source-value">{{ config.source_type }} / {{ config.source_value }}</small>
                 </div>
+            </div>
+        </section>
+
+        <section class="panel guide-card">
+            <div class="guide-head">
+                <h2>How To Use This Page</h2>
+                <p>Run these steps in order to quickly validate your setup and start traffic analysis.</p>
+            </div>
+            <div class="guide-grid">
+                <article class="guide-step">
+                    <strong>1. Pick Source</strong>
+                    <p>Use camera index, local video/image path, or upload media from the right panel.</p>
+                </article>
+                <article class="guide-step">
+                    <strong>2. Confirm Live Data</strong>
+                    <p>Wait for vehicles, congestion, and FPS cards to move from zero values.</p>
+                </article>
+                <article class="guide-step">
+                    <strong>3. Review Advice</strong>
+                    <p>Read suggestions, alerts, and corridor pressure cards before taking action.</p>
+                </article>
+            </div>
+            <div id="connection-banner" class="connection-banner" data-state="syncing">
+                <span id="connection-dot" class="connection-dot" data-state="syncing"></span>
+                <div class="connection-copy">
+                    <strong id="connection-status">Connecting</strong>
+                    <small id="connection-note">Starting backend link check.</small>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel department-panel">
+            <div class="guide-head">
+                <h2>Department Blocks</h2>
+                <p>Each block reflects one team using this dashboard in daily operations.</p>
+            </div>
+            <div class="department-grid">
+                <article class="department-card">
+                    <strong>Traffic Operations</strong>
+                    <p>Monitors live vehicles, queues, and corridor pressure for real-time junction decisions.</p>
+                </article>
+                <article class="department-card">
+                    <strong>Emergency Response</strong>
+                    <p>Uses alerts and source controls to prioritize incident corridors and maintain safety gaps.</p>
+                </article>
+                <article class="department-card">
+                    <strong>Data and Analytics</strong>
+                    <p>Tracks congestion, throughput, and historical trends to validate operational performance.</p>
+                </article>
+                <article class="department-card">
+                    <strong>AI Advisory Cell</strong>
+                    <p>Reviews recommendations and risk notes before applying strategy changes in the field.</p>
+                </article>
             </div>
         </section>
 
@@ -178,9 +244,10 @@
                         </select>
                         <label for="source-input">Source Value</label>
                         <input id="source-input" name="source_value" type="text" value="{{ config.source_value }}" placeholder="Camera index or absolute path">
+                        <p class="input-help">Camera example: <code>0</code> | File example: <code>D:\traffic\junction.mp4</code></p>
                         <button type="submit" class="primary-button">Apply Source</button>
                     </form>
-                    <div id="form-feedback" class="feedback">No changes submitted yet.</div>
+                    <div id="form-feedback" class="feedback" aria-live="polite">No changes submitted yet.</div>
                 </article>
 
                 <article class="panel side-card">
@@ -206,7 +273,7 @@
                     <ul id="suggestions-list" class="bullet-list">
                         <li>Waiting for the first live advisory.</li>
                     </ul>
-                    <div id="suggestion-warning" class="warning-box">Risk information will appear here.</div>
+                    <div id="suggestion-warning" class="warning-box" aria-live="polite">Risk information will appear here.</div>
                 </article>
 
                 <article class="panel side-card">
@@ -234,6 +301,11 @@
                 </article>
             </aside>
         </section>
+
+        <footer class="site-footer panel-lite">
+            <strong>Smart Traffic Management System</strong>
+            <span>Dashboard view for operations, emergency handling, analytics, and AI-assisted decisions.</span>
+        </footer>
     </main>
 
     <script src="{{ url_for('static', filename='app.js') }}"></script>

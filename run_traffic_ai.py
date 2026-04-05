@@ -49,6 +49,16 @@ class SystemProfile:
 
 
 def parse_args() -> argparse.Namespace:
+    valid_families = ("auto", *DETECTION_MODEL_FAMILIES, *SEGMENTATION_MODEL_FAMILIES)
+    valid_priorities = ("quality", "balanced", "speed")
+
+    default_family = os.getenv("MODEL_FAMILY", "auto").strip().lower() or "auto"
+    if default_family not in valid_families:
+        default_family = "auto"
+    default_priority = os.getenv("MODEL_PRIORITY", "balanced").strip().lower() or "balanced"
+    if default_priority not in valid_priorities:
+        default_priority = "balanced"
+
     parser = argparse.ArgumentParser(description="Run the Smart Traffic AI dashboard.")
     parser.add_argument("--source-type", choices=("camera", "video", "image", "stream"), default=None)
     parser.add_argument("--source-value", default=None)
@@ -56,14 +66,14 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--vision-model", default=None, help="YOLO model name or path, for example yolo26.pt")
     parser.add_argument(
         "--model-family",
-        default="auto",
-        choices=("auto", *DETECTION_MODEL_FAMILIES, *SEGMENTATION_MODEL_FAMILIES),
+        default=default_family,
+        choices=valid_families,
         help="Model family to use. In auto mode, the launcher picks the best detector family for this system.",
     )
     parser.add_argument(
         "--model-priority",
-        default="balanced",
-        choices=("quality", "balanced", "speed"),
+        default=default_priority,
+        choices=valid_priorities,
         help="Quality favors larger models, speed favors lighter models, balanced adapts to hardware.",
     )
     parser.add_argument("--host", default=None)
@@ -317,7 +327,7 @@ def _pick_best_candidate(candidates: list[str], profile: SystemProfile, priority
     return min(scored, key=lambda item: item[1])[0]
 
 
-def _family_candidates(family: str, project_root: Path, local_weights: list[Path]) -> list[str]:
+def _family_candidates(family: str, local_weights: list[Path]) -> list[str]:
     local_matches = [str(path) for path in local_weights if _family_match(family, path.name)]
     if local_matches:
         return local_matches
@@ -326,12 +336,11 @@ def _family_candidates(family: str, project_root: Path, local_weights: list[Path
 
 def _select_model_for_family(
     family: str,
-    project_root: Path,
     local_weights: list[Path],
     profile: SystemProfile,
     priority: str,
 ) -> tuple[str, str]:
-    candidates = _family_candidates(family, project_root, local_weights)
+    candidates = _family_candidates(family, local_weights)
     if not candidates:
         return ("", "")
     chosen = _pick_best_candidate(candidates, profile, priority)
@@ -341,7 +350,6 @@ def _select_model_for_family(
 
 
 def _select_auto_detector(
-    project_root: Path,
     local_weights: list[Path],
     profile: SystemProfile,
     priority: str,
@@ -352,9 +360,7 @@ def _select_auto_detector(
             continue
         chosen = _pick_best_candidate([str(path) for path in local_candidates], profile, priority)
         return (chosen, f"auto-local:{family}")
-
-    chosen = _pick_best_candidate(list(DEFAULT_CANDIDATES_BY_FAMILY["yolo26"]), profile, priority)
-    return (chosen, "auto-default:yolo26")
+    return ("", "auto-no-local")
 
 
 def select_detector_model(
@@ -380,11 +386,14 @@ def select_detector_model(
         family = "auto"
 
     if family == "auto":
-        selected, reason = _select_auto_detector(project_root, local_weights, profile, priority)
-        resolved = _resolve_requested_model(project_root, selected) or selected
-        return (resolved, reason, profile)
+        selected, reason = _select_auto_detector(local_weights, profile, priority)
+        if selected:
+            resolved = _resolve_requested_model(project_root, selected) or selected
+            return (resolved, reason, profile)
+        resolved_default = _resolve_requested_model(project_root, configured_default) or configured_default
+        return (resolved_default, "auto-config-default", profile)
 
-    selected, reason = _select_model_for_family(family, project_root, local_weights, profile, priority)
+    selected, reason = _select_model_for_family(family, local_weights, profile, priority)
     if selected:
         resolved = _resolve_requested_model(project_root, selected) or selected
         return (resolved, f"{family}:{reason}", profile)

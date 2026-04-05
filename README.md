@@ -79,6 +79,16 @@ If Python is already installed:
 python .\run_traffic_ai.py --source-type camera --source-value 0
 ```
 
+Model selection examples:
+
+```powershell
+python .\run_traffic_ai.py --model-family auto --model-priority balanced
+python .\run_traffic_ai.py --model-family yolo26 --model-priority quality
+python .\run_traffic_ai.py --vision-model .\yolo26m.pt --show-config
+```
+
+The launcher now profiles CPU, RAM, and GPU capability and auto-picks the best available detector model for the system. If local YOLO26 weights are present, those are preferred.
+
 The bootstrap script installs any missing Python packages from `requirements.txt` before starting Flask.
 
 After launch, open either site in your browser:
@@ -130,6 +140,10 @@ Important environment variables:
 - `OPENAI_MODEL`: default is `gpt-4o-mini`
 - `OLLAMA_ENABLED`: set to `true` to use a local LLM fallback
 - `VISION_MODEL_PATH`: default is `yolov8n.pt`, but you can replace it with a custom Indian-traffic model
+- `MODEL_FAMILY`: optional launch argument for selecting detector family (for example `yolo26`, `rtdetr`, `yolo-world`, `yoloe`)
+- `MODEL_PRIORITY`: optional launch argument for `quality`, `balanced`, or `speed`
+
+Note: SAM, SAM2, SAM3, MobileSAM, and FastSAM are segmentation families and are intentionally not auto-selected for this traffic pipeline because it is optimized for box-based detection and tracking.
 
 ## Notes On Indian Traffic Scenes
 
@@ -149,3 +163,51 @@ For higher-quality recognition of Indian-specific categories such as auto-ricksh
 - Emergency vehicle route prioritization across multiple corridors
 - Long-term reporting dashboards and incident replay
 - Integration with municipal sensors, edge devices, or mobile operator tools
+
+## Implementation Formulas
+
+The following core mathematical formulas drive the simulation's routing, dynamics, and traffic adaptation:
+
+### 1. Adaptive Green Window (Target Green)
+Used to calculate the dynamic signal timing to maintain queue stability:
+```javascript
+let targetGreen = autoBaseGreenMs + reliefBoostMs - trimPenaltyMs;
+// Priority adjustment:
+if (emergency) targetGreen += emergencyBoost;
+// Congestion adjustments:
+if (criticalDelay) targetGreen += 700;
+```
+* **Auto Base**: Base timing determined by `lightCycleTime` multiplied by relative demand factor.
+
+### 2. Vehicle Spawn Probability
+Determines continuous and random generation rates per frame limit:
+```javascript
+let frameChance = 0.004 + (state.demandIntensity / 220) * 0.026;
+let dt_adjusted_chance = 1 - Math.pow(1 - frameChance, Math.max(0.35, dt / 16.6667));
+```
+
+### 3. Turn Geometry and Path Interpolation
+Calculates the trajectory offsets for smooth junction turning without clipping corners:
+```javascript
+// Start / End control points are aligned to lane center
+const control = horizontalEntry
+    ? { x: end.x, y: start.y }
+    : { x: start.x, y: end.y };
+// Using Quadratic Bezier mapping along intersection bounding boxes.
+```
+
+### 4. V2V (Vehicle-to-Vehicle) Communication & Yielding
+Used for emergency vehicles approaching intersections where crossing traffic must halt:
+```javascript
+// Broadcast radius condition:
+if (distance <= config.broadcastRadius) {
+    // Relative pos calculation to yield:
+    let offset_target = (this.lane === 1 ? config.laneWidth * 0.12 : -config.laneWidth * 0.1);
+}
+```
+
+### 5. Congestion Index Rating
+Normalized score used by the adaptive manager to shift controller modes (0-100 scale):
+```javascript
+state.metrics.congestionIndex = totalQueue * 9 + averageWaitMs / 220 + liveVehicles * 0.8 - averageSpeedKmh * 0.24;
+```

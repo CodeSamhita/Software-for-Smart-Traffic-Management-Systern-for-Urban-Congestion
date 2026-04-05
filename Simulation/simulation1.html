@@ -2,259 +2,462 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=1400"> <!-- Forced Desktop View -->
     <title>Smart Traffic Management System</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    
+    <!-- Custom CSS -->
     <link rel="stylesheet" href="./css/styles.css">
 </head>
 <body>
-    <div id="banner">
-        <div id="banner-title" style="font-size: 15px; font-weight: 800; color: #eff6ff;">Adaptive urban traffic control is live</div>
-        <div id="banner-text" style="margin-top: 4px; font-size: 13px; color: #94a3b8;">The controller is auto-adjusting green windows from live queue pressure, wait time, and corridor demand across the junction.</div>
+    <!-- Preloader -->
+    <div id="preloader">
+        <div class="spinner-glow"></div>
+        <h4 class="mt-4 text-neon" style="letter-spacing: 2px;">INITIALIZING SIMULATION...</h4>
     </div>
 
-    <div id="controls" class="panel">
-        <div class="eyebrow">Urban Congestion Demo</div>
-        <h1>Smart Traffic Management System</h1>
-        <p>Capstone-ready simulation for adaptive traffic lights, corridor pressure monitoring, and priority-vehicle handling at a busy urban intersection.</p>
-
-        <div class="section-title">Scenario Setup</div>
-        <div class="card">
-            <div class="grid-2">
-                <div>
-                    <label for="profile-select">Demand Profile</label>
-                    <select id="profile-select">
-                        <option value="balanced">Balanced flow</option>
-                        <option value="rush-ns">Rush hour north-south</option>
-                        <option value="rush-ew">Commercial east-west</option>
-                        <option value="event">Event dispersal surge</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="mode-select">Signal Strategy</label>
-                    <select id="mode-select">
-                        <option value="adaptive">Adaptive auto timing</option>
-                        <option value="fixed">Fixed cycle</option>
-                    </select>
-                </div>
-            </div>
-            <div style="margin-top: 14px;">
-                <label for="view-select">Simulation View</label>
-                <select id="view-select">
-                    <option value="2d">2D top view</option>
-                    <option value="3d">3D perspective view</option>
-                </select>
-            </div>
-            <div style="margin-top: 14px;">
-                <label for="depth-slider">3D Depth <span id="val-depth">68%</span></label>
-                <input type="range" id="depth-slider" min="40" max="92" step="2" value="68">
-            </div>
-            <p id="profile-note" style="margin-top: 10px; font-size: 13px;">Balanced demand keeps arrivals even on all approaches.</p>
-        </div>
-
-        <div class="card">
-            <label for="spawn-rate">Demand Intensity <span id="val-spawn">High</span></label>
-            <input type="range" id="spawn-rate" min="60" max="220" value="150">
-            <label for="cycle-time" style="margin-top: 16px;">Base Green Window <span id="val-cycle">5.5 s</span></label>
-            <input type="range" id="cycle-time" min="3000" max="12000" step="500" value="5500">
-            <p id="cycle-note" style="margin-top: 10px; font-size: 13px;">Adaptive mode will stretch or shorten this baseline automatically to prevent queue buildup.</p>
-            <label for="max-speed" style="margin-top: 16px;">Fleet Speed Cap <span id="val-speed">66 km/h</span></label>
-            <input type="range" id="max-speed" min="3" max="10" step="0.5" value="5.5">
-        </div>
-
-        <div class="card">
-            <div class="grid-2">
-                <div>
-                    <label for="emergency-type">Emergency Type</label>
-                    <select id="emergency-type">
-                        <option value="ambulance">Ambulance</option>
-                        <option value="police">Police</option>
-                        <option value="fire">Fire and rescue</option>
-                        <option value="response">Disaster response</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="emergency-action">Emergency Action</label>
-                    <select id="emergency-action">
-                        <option value="priority">Priority passage</option>
-                        <option value="lockdown">Intersection lockdown</option>
-                        <option value="rescue">Rescue convoy</option>
-                        <option value="evacuation">Evacuation wave</option>
-                    </select>
-                </div>
-            </div>
-            <label for="priority-dir" style="margin-top: 16px;">Priority Corridor</label>
-            <select id="priority-dir">
-                <option value="">None</option>
-                <option value="3">North corridor</option>
-                <option value="0">East corridor</option>
-                <option value="2">South corridor</option>
-                <option value="1">West corridor</option>
-            </select>
-            <p id="priority-note" style="margin-top: 10px; font-size: 13px;">Dispatch ambulance, police, fire, or disaster-response vehicles with communication-assisted clearance.</p>
-            <div class="button-row">
-                <button id="btn-dispatch" class="primary">Dispatch Emergency</button>
-                <button id="btn-reset-priority" class="secondary">Clear Priority</button>
-            </div>
-            <div class="toggle-row">
-                <div class="toggle-copy">
-                    <strong>Random Emergency Incidents</strong>
-                    <span id="random-emergency-note">Disabled. Enable to let the simulator randomly trigger ambulance, police, fire, and response incidents.</span>
-                </div>
-                <label class="switch" for="random-emergency-enabled">
-                    <input id="random-emergency-enabled" type="checkbox">
-                    <span class="slider"></span>
-                </label>
-            </div>
-        </div>
-
-        <div class="button-row">
-            <button id="btn-pause" class="secondary">Pause Simulation</button>
-            <button id="btn-clear" class="danger">Reset Vehicles</button>
-        </div>
-
-        <div class="section-title">Analytics Log</div>
-        <div class="card">
-            <div class="status-grid">
-                <div><div class="status-label">Samples</div><div id="log-samples" class="status-value">0</div></div>
-                <div><div class="status-label">Events</div><div id="log-events" class="status-value">0</div></div>
-                <div><div class="status-label">Window</div><div id="log-window" class="status-value">0 s</div></div>
-                <div><div class="status-label">Last Export</div><div id="log-export" class="status-value">Never</div></div>
-                <div><div class="status-label">Storage</div><div id="log-storage" class="status-value">Starting</div></div>
-                <div><div class="status-label">Stored</div><div id="log-stored" class="status-value">0 / 0</div></div>
-            </div>
-            <p id="log-last" style="margin-top: 12px; font-size: 13px;">Live automatic logging is active with a 1-second sampling interval, graph feed, and permanent system storage.</p>
-            <div class="button-row">
-                <button id="btn-export-json" class="secondary">Export JSON</button>
-                <button id="btn-export-csv" class="secondary">Export CSV</button>
-            </div>
-            <div class="button-row">
-                <button id="btn-reset-logs" class="secondary">Reset Logs</button>
-                <button id="btn-snapshot" class="secondary">Log Snapshot</button>
-            </div>
-            <div class="button-row">
-                <button id="btn-graph-page" class="primary full-span">Open Live Graph Page</button>
-            </div>
-        </div>
-
-        <div class="section-title">AI Control Center</div>
-        <div class="card">
-            <div class="toggle-row" style="margin-top: 0;">
-                <div class="toggle-copy">
-                    <strong>OpenAI Advisor</strong>
-                    <span id="ai-note">Optional BYO API mode for live traffic analysis, forecasting, and timing suggestions. The key stays out of logs and exports.</span>
-                </div>
-                <label class="switch" for="ai-enabled">
-                    <input id="ai-enabled" type="checkbox">
-                    <span class="slider"></span>
-                </label>
-            </div>
-            <div class="grid-2" style="margin-top: 14px;">
-                <div>
-                    <label for="ai-model">Model</label>
-                    <select id="ai-model">
-                        <option value="gpt-5-mini">gpt-5-mini</option>
-                        <option value="gpt-5.4">gpt-5.4</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="ai-key">OpenAI API Key</label>
-                    <input id="ai-key" type="password" placeholder="sk-..." autocomplete="off">
-                </div>
-            </div>
-            <div class="toggle-row">
-                <div class="toggle-copy">
-                    <strong>Keep Key In Session</strong>
-                    <span>Stores the key only in this browser session so it can be reused after a refresh. Turn off to keep it memory-only.</span>
-                </div>
-                <label class="switch" for="ai-remember">
-                    <input id="ai-remember" type="checkbox">
-                    <span class="slider"></span>
-                </label>
-            </div>
-            <div class="button-row">
-                <button id="btn-ai-analyze" class="secondary">AI Analyze</button>
-                <button id="btn-ai-forecast" class="secondary">AI Forecast</button>
-            </div>
-            <div class="button-row">
-                <button id="btn-ai-optimize" class="primary">Suggest Timing</button>
-                <button id="btn-ai-apply" class="secondary">Apply AI Plan</button>
-            </div>
-            <div id="ai-status" class="ai-status muted">AI advisor is disabled. Enable it and enter an OpenAI API key to start.</div>
-            <div class="ai-output">
-                <strong>Latest AI Insight</strong>
-                <pre id="ai-output">No AI response yet.</pre>
-            </div>
-        </div>
-    </div>
-
-    <div id="metrics" class="panel">
-        <div class="section-title" style="margin-top: 0;">Network Status</div>
-        <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px;">
-                <div>
-                    <div class="status-label">Controller</div>
-                    <div id="status-mode" class="pill">Adaptive</div>
-                </div>
-                <div style="text-align: right;">
-                    <div class="status-label">Active Green</div>
-                    <div id="status-active" class="status-value">North corridor</div>
-                </div>
-            </div>
-            <div class="status-grid">
-                <div><div class="status-label">Next Candidate</div><div id="status-next" class="status-value">East corridor</div></div>
-                <div><div class="status-label">Priority</div><div id="status-priority" class="status-value">None</div></div>
-                <div><div class="status-label">Emergency Type</div><div id="status-emergency" class="status-value">None</div></div>
-                <div><div class="status-label">Emergency Action</div><div id="status-action" class="status-value">None</div></div>
-                <div><div class="status-label">V2V Links</div><div id="status-links" class="status-value">0</div></div>
-                <div><div class="status-label">Yielding Vehicles</div><div id="status-yield" class="status-value">0</div></div>
-                <div><div class="status-label">Green Timer</div><div id="status-timer" class="status-value">0.0 s</div></div>
-                <div><div class="status-label">Signal Phase</div><div id="status-phase" class="status-value">Green</div></div>
-                <div><div class="status-label">Live Target</div><div id="status-target" class="status-value">5.5 s</div></div>
-                <div><div class="status-label">Auto Base</div><div id="status-auto-base" class="status-value">5.5 s</div></div>
-                <div><div class="status-label">Congestion Band</div><div id="status-band" class="status-value">Low</div></div>
-                <div><div class="status-label">Queue Sum</div><div id="status-queue-total" class="status-value">0</div></div>
-            </div>
-            <p id="status-note" style="margin-top: 12px; font-size: 13px;">Adaptive auto-timing controller is balancing queues and arrivals.</p>
-        </div>
-
-        <div class="section-title">System Metrics</div>
-        <div class="metric-grid">
-            <div class="card"><div class="metric-label">Live Vehicles</div><div id="metric-live" class="metric-value">0</div><div class="metric-sub">Current network load</div></div>
-            <div class="card"><div class="metric-label">Throughput / Min</div><div id="metric-throughput" class="metric-value">0</div><div class="metric-sub">Trips leaving the model</div></div>
-            <div class="card"><div class="metric-label">Average Wait</div><div id="metric-wait" class="metric-value">0.0 s</div><div class="metric-sub">Approach delay per vehicle</div></div>
-            <div class="card"><div class="metric-label">Average Speed</div><div id="metric-speed" class="metric-value">0 km/h</div><div class="metric-sub">Live fleet velocity</div></div>
-            <div class="card"><div class="metric-label">Congestion Index</div><div id="metric-congestion" class="metric-value">0</div><div class="metric-sub">0 is clear, 100 is critical</div></div>
-            <div class="card"><div class="metric-label">Completed Trips</div><div id="metric-completed" class="metric-value">0</div><div class="metric-sub">Vehicles served so far</div></div>
-            <div class="card"><div class="metric-label">Emergency Trips</div><div id="metric-emergency" class="metric-value">0</div><div class="metric-sub">Emergency vehicles completed</div></div>
-            <div class="card"><div class="metric-label">V2V Links</div><div id="metric-links" class="metric-value">0</div><div class="metric-sub">Active communication handshakes</div></div>
-        </div>
-
-        <div class="section-title">Corridor Pressure</div>
-        <div class="corridor">
-            <div class="corridor-head"><div class="corridor-name">North</div><div id="north-score" class="corridor-name">0</div></div>
-            <div class="corridor-meta"><span id="north-queue">Queue 0</span><span id="north-wait">Wait 0.0 s</span></div>
-            <div class="bar"><div id="north-bar" class="bar-fill"></div></div>
-        </div>
-        <div class="corridor">
-            <div class="corridor-head"><div class="corridor-name">East</div><div id="east-score" class="corridor-name">0</div></div>
-            <div class="corridor-meta"><span id="east-queue">Queue 0</span><span id="east-wait">Wait 0.0 s</span></div>
-            <div class="bar"><div id="east-bar" class="bar-fill"></div></div>
-        </div>
-        <div class="corridor">
-            <div class="corridor-head"><div class="corridor-name">South</div><div id="south-score" class="corridor-name">0</div></div>
-            <div class="corridor-meta"><span id="south-queue">Queue 0</span><span id="south-wait">Wait 0.0 s</span></div>
-            <div class="bar"><div id="south-bar" class="bar-fill"></div></div>
-        </div>
-        <div class="corridor">
-            <div class="corridor-head"><div class="corridor-name">West</div><div id="west-score" class="corridor-name">0</div></div>
-            <div class="corridor-meta"><span id="west-queue">Queue 0</span><span id="west-wait">Wait 0.0 s</span></div>
-            <div class="bar"><div id="west-bar" class="bar-fill"></div></div>
-        </div>
-    </div>
-
+    <!-- Background Canvas -->
     <canvas id="sim-canvas"></canvas>
-    <div class="floating-copyright">(c) 2026 Smart Traffic Management System | Aditya Sharma | Urban Congestion Demo</div>
 
+    <div id="ui-layer">
+        <!-- Floating Navigation -->
+        <header class="glass-nav py-3 mb-4">
+        <div class="container-fluid px-4 d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+                <i class="fa-solid fa-traffic-light text-neon fs-3"></i>
+                <div>
+                    <span class="eyebrow mb-0">Smart Traffic Suite</span>
+                    <h5 class="mb-0 fw-bold">Simulation Control & City Operations</h5>
+                </div>
+            </div>
+            <nav class="d-flex gap-3">
+                <a href="simulation1.html" class="btn neon-btn"><i class="fa-solid fa-desktop me-2"></i>Simulation</a>
+                <a href="traffic-analytics.html" class="btn btn-outline-secondary text-light border-secondary"><i class="fa-solid fa-chart-line me-2"></i>Analytics</a>
+                <a href="http://127.0.0.1:8501/control-center" target="_blank" rel="noopener" class="btn btn-outline-secondary text-light border-secondary">Control Center</a>
+                <a href="http://127.0.0.1:8501/dashboard" target="_blank" rel="noopener" class="btn btn-outline-secondary text-light border-secondary">Dashboard</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container-fluid px-4 pb-5">
+        <!-- Top Status Banner -->
+        <div id="banner" class="glass-panel text-center py-2 px-4 mx-auto mb-4" style="max-width: 600px; animation-delay: 0.1s;">
+            <div id="banner-title" class="fw-bold text-neon"><i class="fa-solid fa-broadcast-tower me-2"></i>Adaptive urban traffic control is live</div>
+            <div id="banner-text" class="small text-mutted mt-1">The controller is auto-adjusting green windows from live queue pressure, wait time, and corridor demand across the junction.</div>
+        </div>
+
+        <div class="row w-100 m-0">
+            <!-- Left Panel: Controls -->
+            <div class="col-3 pe-3">
+                <div id="controls" class="glass-panel p-4 h-100 overflow-auto stagger-1" style="max-height: calc(100vh - 180px);">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="eyebrow">Demo Configuration</span>
+                    </div>
+
+                    <h4 class="mb-3 text-neon">Control Panel</h4>
+
+                    <!-- Scenario Setup -->
+                    <div class="section-title"><i class="fa-solid fa-sliders me-2"></i>Scenario Setup</div>
+                    <div class="glass-card mb-3">
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label for="profile-select" class="form-label small mb-1">Demand Profile</label>
+                                <select id="profile-select" class="form-select form-select-sm">
+                                    <option value="balanced">Balanced flow</option>
+                                    <option value="rush-ns">Rush hour (N-S)</option>
+                                    <option value="rush-ew">Commercial (E-W)</option>
+                                    <option value="event">Event surge</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label for="mode-select" class="form-label small mb-1">Signal Strategy</label>
+                                <select id="mode-select" class="form-select form-select-sm">
+                                    <option value="adaptive">Adaptive Auto</option>
+                                    <option value="fixed">Fixed Cycle</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center bg-dark bg-opacity-25 p-2 rounded border border-secondary border-opacity-25 mb-2">
+                            <div>
+                                <div class="small fw-bold text-light">Manual Override</div>
+                                <div id="smart-actions-note" class="small text-mutted" style="font-size: 0.7rem;">Adaptive timing and emergency preemption active.</div>
+                            </div>
+                            <div class="form-check form-switch fs-5 mb-0">
+                                <input class="form-check-input" type="checkbox" role="switch" id="disable-smart-actions">
+                            </div>
+                        </div>
+                        <div id="profile-note" class="small text-mutted" style="font-size: 0.75rem;">Balanced demand keeps arrivals even.</div>
+                    </div>
+
+                    <!-- Tuning Parameters -->
+                    <div class="glass-card mb-3">
+                        <div class="mb-3">
+                            <label for="spawn-rate" class="form-label small d-flex justify-content-between mb-0">
+                                <span>Demand Intensity</span> <span id="val-spawn" class="text-neon fw-bold">High</span>
+                            </label>
+                            <input type="range" class="form-range" id="spawn-rate" min="60" max="220" value="150">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="cycle-time" class="form-label small d-flex justify-content-between mb-0">
+                                <span>Base Green Window</span> <span id="val-cycle" class="text-neon fw-bold">5.5 s</span>
+                            </label>
+                            <input type="range" class="form-range" id="cycle-time" min="3000" max="12000" step="500" value="5500">
+                            <div id="cycle-note" class="small text-mutted mt-1" style="font-size: 0.75rem;">Adaptive mode alters this to prevent queue buildup.</div>
+                        </div>
+
+                        <div class="mb-2">
+                            <label for="max-speed" class="form-label small d-flex justify-content-between mb-0">
+                                <span>Fleet Speed Cap</span> <span id="val-speed" class="text-neon fw-bold">66 km/h</span>
+                            </label>
+                            <input type="range" class="form-range" id="max-speed" min="3" max="10" step="0.5" value="5.5">
+                        </div>
+                    </div>
+
+                    <!-- Emergency Module -->
+                    <div class="section-title"><i class="fa-solid fa-truck-medical me-2"></i>Emergency System</div>
+                    <div class="glass-card mb-3">
+                         <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label for="emergency-type" class="form-label small mb-1">Emergency Type</label>
+                                <select id="emergency-type" class="form-select form-select-sm">
+                                    <option value="ambulance">Ambulance</option>
+                                    <option value="police">Police</option>
+                                    <option value="fire">Fire/Rescue</option>
+                                    <option value="response">Disaster</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label for="emergency-action" class="form-label small mb-1">Action Flow</label>
+                                <select id="emergency-action" class="form-select form-select-sm">
+                                    <option value="priority">Priority passage</option>
+                                    <option value="lockdown">Lockdown</option>
+                                    <option value="rescue">Convoy</option>
+                                    <option value="evacuation">Evacuation</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="priority-dir" class="form-label small mb-1">Priority Corridor</label>
+                            <select id="priority-dir" class="form-select form-select-sm">
+                                <option value="">None</option>
+                                <option value="3">North corridor</option>
+                                <option value="0">East corridor</option>
+                                <option value="2">South corridor</option>
+                                <option value="1">West corridor</option>
+                            </select>
+                            <div id="priority-note" class="small text-mutted mt-1" style="font-size: 0.75rem;">Clear path via V2X handshakes.</div>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6"><button id="btn-dispatch" class="btn btn-sm btn-outline-danger w-100 fw-bold">Dispatch</button></div>
+                            <div class="col-6"><button id="btn-reset-priority" class="btn btn-sm btn-outline-secondary w-100">Clear</button></div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center bg-dark bg-opacity-25 p-2 rounded border border-secondary border-opacity-25">
+                            <div>
+                                <div class="small fw-bold text-light">Random Incidents</div>
+                                <div id="random-emergency-note" class="small text-mutted" style="font-size: 0.7rem;">Disabled currently.</div>
+                            </div>
+                            <div class="form-check form-switch fs-5 mb-0">
+                                <input class="form-check-input" type="checkbox" role="switch" id="random-emergency-enabled">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Flow Control Buttons -->
+                    <div class="row g-2 mb-4">
+                        <div class="col-6"><button id="btn-pause" class="btn btn-outline-warning w-100 fw-bold"><i class="fa-solid fa-pause me-2"></i>Pause</button></div>
+                        <div class="col-6"><button id="btn-clear" class="btn danger-btn w-100"><i class="fa-solid fa-trash me-2"></i>Reset</button></div>
+                    </div>
+
+                    <!-- Deep Analysis Tools -->
+                    <div class="section-title"><i class="fa-solid fa-brain me-2"></i>AI Control Center</div>
+                    <div class="glass-card mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div class="small fw-bold text-light">OpenAI Advisor 
+                                <span id="ai-note" class="d-block text-mutted fw-normal" style="font-size:0.7rem;">Live traffic analysis via API</span>
+                            </div>
+                            <div class="form-check form-switch fs-5 mb-0">
+                                <input class="form-check-input" type="checkbox" role="switch" id="ai-enabled">
+                            </div>
+                        </div>
+
+                        <div class="row g-2 mb-2">
+                            <div class="col-5">
+                                <select id="ai-model" class="form-select form-select-sm">
+                                    <option value="gpt-5-mini">gpt-5-mini</option>
+                                    <option value="gpt-5.4">gpt-5.4</option>
+                                </select>
+                            </div>
+                            <div class="col-7">
+                                <input id="ai-key" type="password" class="form-control form-control-sm" placeholder="sk-..." autocomplete="off">
+                            </div>
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" value="" id="ai-remember">
+                            <label class="form-check-label small text-mutted" for="ai-remember" style="font-size: 0.75rem;">Keep key in session</label>
+                        </div>
+
+                        <div class="row g-2 mb-2">
+                            <div class="col-6"><button id="btn-ai-analyze" class="btn btn-sm btn-outline-info w-100">Analyze</button></div>
+                            <div class="col-6"><button id="btn-ai-forecast" class="btn btn-sm btn-outline-info w-100">Forecast</button></div>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-7"><button id="btn-ai-optimize" class="btn btn-sm primary-btn w-100">Optimize Timing</button></div>
+                            <div class="col-5"><button id="btn-ai-apply" class="btn btn-sm btn-outline-success w-100">Apply</button></div>
+                        </div>
+
+                        <div id="ai-status" class="small text-mutted border border-secondary rounded p-2 mb-2" style="font-size: 0.75rem; background:rgba(0,0,0,0.3);">AI advisor disabled. Provide API key.</div>
+                        <div class="small fw-bold text-light mb-1">Insight Log:</div>
+                        <div id="ai-output" style="font-size: 0.75rem; max-height:100px; overflow-y:auto;">No AI response yet.</div>
+                    </div>
+
+                    <!-- Analytics Section -->
+                    <div class="section-title"><i class="fa-solid fa-server me-2"></i>Analytics Logging</div>
+                    <div class="glass-card">
+                        <div class="row g-2 text-center small mb-3">
+                            <div class="col-4 border-end border-secondary border-opacity-25">
+                                <div class="text-mutted" style="font-size:0.7rem;">SAMPLES</div>
+                                <div id="log-samples" class="fw-bold text-light">0</div>
+                            </div>
+                            <div class="col-4 border-end border-secondary border-opacity-25">
+                                <div class="text-mutted" style="font-size:0.7rem;">EVENTS</div>
+                                <div id="log-events" class="fw-bold text-light">0</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-mutted" style="font-size:0.7rem;">WINDOW</div>
+                                <div id="log-window" class="fw-bold text-light">0 s</div>
+                            </div>
+                            <div class="col-4 border-end border-secondary border-opacity-25 mt-2">
+                                <div class="text-mutted" style="font-size:0.7rem;">LAST EXPORT</div>
+                                <div id="log-export" class="fw-bold text-light">Never</div>
+                            </div>
+                            <div class="col-4 border-end border-secondary border-opacity-25 mt-2">
+                                <div class="text-mutted" style="font-size:0.7rem;">STORAGE</div>
+                                <div id="log-storage" class="fw-bold text-light">Starting</div>
+                            </div>
+                            <div class="col-4 mt-2">
+                                <div class="text-mutted" style="font-size:0.7rem;">STORED</div>
+                                <div id="log-stored" class="fw-bold text-light">0 / 0</div>
+                            </div>
+                        </div>
+                        <div id="log-last" class="text-mutted text-center mb-3" style="font-size: 0.7rem;">Live logging active.</div>
+
+                        <div class="row g-2 mb-2">
+                            <div class="col-6"><button id="btn-export-json" class="btn btn-sm btn-outline-secondary w-100">JSON</button></div>
+                            <div class="col-6"><button id="btn-export-csv" class="btn btn-sm btn-outline-secondary w-100">CSV</button></div>
+                        </div>
+                        <div class="row g-2 mb-2">
+                            <div class="col-6"><button id="btn-reset-logs" class="btn btn-sm btn-outline-danger w-100">Reset</button></div>
+                            <div class="col-6"><button id="btn-snapshot" class="btn btn-sm btn-outline-primary w-100">Snapshot</button></div>
+                        </div>
+                        <button id="btn-graph-page" class="btn neon-btn w-100 mt-2">Open Graphs</button>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Middle Panel: Canvas stays in background -->
+            <div class="col-6 position-relative">
+               <!-- Map goes here in background --> 
+            </div>
+
+            <!-- Right Panel: Metrics -->
+            <div class="col-3 ps-3">
+                <div id="metrics" class="glass-panel p-4 h-100 overflow-auto stagger-2" style="max-height: calc(100vh - 180px);">
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="eyebrow">Real Time Telemetry</span>
+                    </div>
+
+                    <h4 class="mb-3 text-neon">Network Status</h4>
+
+                    <!-- Network Status -->
+                    <div class="glass-card mb-3">
+                        <div class="d-flex justify-content-between align-items-center border-bottom border-light border-opacity-10 pb-2 mb-3">
+                            <div>
+                                <div class="small text-mutted mb-1">Controller Mode</div>
+                                <div id="status-mode" class="status-pill">Adaptive</div>
+                            </div>
+                            <div class="text-end">
+                                <div class="small text-mutted mb-1">Active Green</div>
+                                <div id="status-active" class="fs-6 fw-bold text-light">North corridor</div>
+                            </div>
+                        </div>
+                        
+                        <div class="row g-2 small">
+                            <div class="col-6 mb-2">
+                                <div class="text-mutted" style="font-size:0.7rem;">NEXT PHASE</div>
+                                <div id="status-next" class="text-light fw-bold">East corridor</div>
+                            </div>
+                            <div class="col-6 mb-2">
+                                <div class="text-mutted" style="font-size:0.7rem;">PRIORITY</div>
+                                <div id="status-priority" class="text-light fw-bold">None</div>
+                            </div>
+                            <div class="col-6 mb-2">
+                                <div class="text-mutted" style="font-size:0.7rem;">EMERGENCY</div>
+                                <div id="status-emergency" class="text-light fw-bold">None</div>
+                            </div>
+                            <div class="col-6 mb-2">
+                                <div class="text-mutted" style="font-size:0.7rem;">ACTION</div>
+                                <div id="status-action" class="text-light fw-bold">None</div>
+                            </div>
+                            <div class="col-6 mb-2">
+                                <div class="text-mutted" style="font-size:0.7rem;">V2X LINKS</div>
+                                <div id="status-links" class="text-light fw-bold">0</div>
+                            </div>
+                            <div class="col-6 mb-2">
+                                <div class="text-mutted" style="font-size:0.7rem;">YIELDING</div>
+                                <div id="status-yield" class="text-light fw-bold">0</div>
+                            </div>
+                            <div class="col-6 mb-2">
+                                <div class="text-mutted" style="font-size:0.7rem;">TIMER</div>
+                                <div id="status-timer" class="text-neon fw-bold">0.0 s</div>
+                            </div>
+                            <div class="col-6 mb-2">
+                                <div class="text-mutted" style="font-size:0.7rem;">PHASE COLOR</div>
+                                <div id="status-phase" class="text-green fw-bold">Green</div>
+                            </div>
+                             <div class="col-6 mb-2">
+                                <div class="text-mutted" style="font-size:0.7rem;">SMART OVERRIDE</div>
+                                <div id="status-smart" class="text-light fw-bold">Enabled</div>
+                            </div>
+                             <div class="col-6 mb-2">
+                                <div class="text-mutted" style="font-size:0.7rem;">DISCIPLINE MGR</div>
+                                <div id="status-discipline" class="text-light fw-bold">Active</div>
+                            </div>
+                             <div class="col-6 mb-2">
+                                <div class="text-mutted" style="font-size:0.7rem;">LIVE TARGET</div>
+                                <div id="status-target" class="text-light fw-bold">5.5 s</div>
+                            </div>
+                             <div class="col-6 mb-2">
+                                <div class="text-mutted" style="font-size:0.7rem;">AUTO BASE</div>
+                                <div id="status-auto-base" class="text-light fw-bold">5.5 s</div>
+                            </div>
+                             <div class="col-6 mb-2">
+                                <div class="text-mutted" style="font-size:0.7rem;">SITUATION</div>
+                                <div id="status-band" class="text-light fw-bold">Low</div>
+                            </div>
+                            <div class="col-6 mb-2">
+                                <div class="text-mutted" style="font-size:0.7rem;">QUEUE SUM</div>
+                                <div id="status-queue-total" class="text-light fw-bold">0</div>
+                            </div>
+                        </div>
+                        <div id="status-note" class="small text-mutted mt-2 text-center" style="font-size: 0.7rem;">Controller is balancing.</div>
+                    </div>
+
+                    <!-- Flow Metrics -->
+                    <div class="section-title"><i class="fa-solid fa-chart-pie me-2"></i>Dashboard</div>
+                    <div class="dashboard-grid mb-3">
+                        <div class="glass-card text-center p-2">
+                            <div class="small text-mutted text-uppercase" style="font-size:0.65rem;">Live Fleet</div>
+                            <div id="metric-live" class="metric-value">0</div>
+                            <div class="small text-mutted" style="font-size:0.65rem;">Load</div>
+                        </div>
+                        <div class="glass-card text-center p-2">
+                            <div class="small text-mutted text-uppercase" style="font-size:0.65rem;">Throughput</div>
+                            <div id="metric-throughput" class="metric-value">0</div>
+                            <div class="small text-mutted" style="font-size:0.65rem;">Per min</div>
+                        </div>
+                        <div class="glass-card text-center p-2">
+                            <div class="small text-mutted text-uppercase" style="font-size:0.65rem;">Avg Wait</div>
+                            <div id="metric-wait" class="metric-value fs-3">0.0<span class="fs-5">s</span></div>
+                            <div class="small text-mutted" style="font-size:0.65rem;">Per vehicle</div>
+                        </div>
+                        <div class="glass-card text-center p-2">
+                            <div class="small text-mutted text-uppercase" style="font-size:0.65rem;">Avg Speed</div>
+                            <div id="metric-speed" class="metric-value fs-3">0<span class="fs-5">kph</span></div>
+                            <div class="small text-mutted" style="font-size:0.65rem;">Velocity</div>
+                        </div>
+                    </div>
+
+                    <div class="glass-card mb-4 p-3 bg-dark bg-opacity-50">
+                       <div class="d-flex justify-content-between align-items-center">
+                           <div>
+                                <div class="small text-mutted text-uppercase fw-bold" style="font-size:0.75rem;">Congestion Index</div>
+                                <div class="small text-mutted" style="font-size:0.65rem;">0 (Clear) to 100 (Critical)</div>
+                           </div>
+                           <div id="metric-congestion" class="fs-2 fw-bold text-neon">0</div>
+                       </div>
+                    </div>
+
+                    <!-- Additional Metrics Summary -->
+                    <div class="row g-2 mb-4 text-center">
+                        <div class="col-4">
+                            <div class="small text-mutted" style="font-size:0.65rem;">COMPLETED</div>
+                            <div id="metric-completed" class="fw-bold text-light">0</div>
+                        </div>
+                        <div class="col-4 border-start border-end border-secondary border-opacity-25">
+                            <div class="small text-mutted" style="font-size:0.65rem;">EMERGENCY</div>
+                            <div id="metric-emergency" class="fw-bold text-light border-1">0</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="small text-mutted" style="font-size:0.65rem;">V2X COMMS</div>
+                            <div id="metric-links" class="fw-bold text-light border-1">0</div>
+                        </div>
+                    </div>
+
+                    <!-- Corridors -->
+                    <div class="section-title"><i class="fa-solid fa-arrows-to-circle me-2"></i>Corridor Pressure</div>
+                    
+                    <div class="corridor">
+                        <div class="corridor-head"><span>North</span><span id="north-score" class="text-neon">0</span></div>
+                        <div class="corridor-meta"><span id="north-queue">Queue 0</span><span id="north-wait">Wait 0.0 s</span></div>
+                        <div class="bar"><div id="north-bar" class="bar-fill"></div></div>
+                    </div>
+
+                    <div class="corridor">
+                        <div class="corridor-head"><span>East</span><span id="east-score" class="text-neon">0</span></div>
+                        <div class="corridor-meta"><span id="east-queue">Queue 0</span><span id="east-wait">Wait 0.0 s</span></div>
+                        <div class="bar"><div id="east-bar" class="bar-fill"></div></div>
+                    </div>
+
+                    <div class="corridor">
+                        <div class="corridor-head"><span>South</span><span id="south-score" class="text-neon">0</span></div>
+                        <div class="corridor-meta"><span id="south-queue">Queue 0</span><span id="south-wait">Wait 0.0 s</span></div>
+                        <div class="bar"><div id="south-bar" class="bar-fill"></div></div>
+                    </div>
+
+                    <div class="corridor">
+                        <div class="corridor-head"><span>West</span><span id="west-score" class="text-neon">0</span></div>
+                        <div class="corridor-meta"><span id="west-queue">Queue 0</span><span id="west-wait">Wait 0.0 s</span></div>
+                        <div class="bar"><div id="west-bar" class="bar-fill"></div></div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Copyright Footer -->
+    <div class="position-fixed bottom-0 start-50 translate-middle-x mb-2 z-3" style="pointer-events: none;">
+        <div class="bg-dark bg-opacity-75 border border-secondary border-opacity-50 text-mutted px-3 py-1 rounded-pill small" style="backdrop-filter: blur(5px); font-size: 0.7rem;">
+            (c) 2026 Smart Traffic Management System | Aditya Sharma | Urban Congestion Demo
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+    <script>
+        // Dismiss preloader when ready
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const preloader = document.getElementById('preloader');
+                if(preloader) {
+                    preloader.style.opacity = '0';
+                    setTimeout(() => preloader.remove(), 500);
+                }
+            }, 800);
+        });
+    </script>
     <script type="module" src="./js/simulation-app.js"></script>
 </body>
 </html>
