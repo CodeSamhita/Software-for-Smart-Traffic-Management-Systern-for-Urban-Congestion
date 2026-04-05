@@ -2,318 +2,341 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Smart Traffic Management System — HTML control dashboard with live feed, source switching, AI suggestions, and corridor analytics.">
+    <meta name="viewport" content="width=1400">
+    <meta name="description" content="Smart Traffic AI — HTML control dashboard with live feed, source switching, AI suggestions, and corridor analytics.">
     <title>Smart Traffic AI — Control Dashboard</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <!-- Shared design system -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <main class="shell">
-        <header class="site-header panel">
-            <div class="site-brand">
-                <span class="eyebrow">Smart Traffic Suite</span>
-                <strong>Urban Mobility Command Interface</strong>
-                <span style="font-size:11px;color:#64748b;">HTML Control Dashboard</span>
+
+    <!-- Preloader -->
+    <div id="preloader">
+        <div class="spinner-glow"></div>
+        <h4 class="mt-4 text-neon" style="letter-spacing:2px;">LOADING CONTROL DASHBOARD...</h4>
+    </div>
+
+    <!-- ── Navigation ─────────────────────────────────────────── -->
+    <header class="glass-nav py-3 mb-4">
+        <div class="container-fluid px-4 d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-3">
+                <i class="fa-solid fa-gauge text-neon fs-3"></i>
+                <div>
+                    <span class="eyebrow mb-0">Smart Traffic Suite</span>
+                    <h5 class="mb-0 fw-bold">Control Dashboard &amp; Operations</h5>
+                </div>
             </div>
-            <nav class="site-nav" aria-label="Primary navigation">
-                <a href="{{ url_for('control_center') }}">Control Center</a>
-                <a href="{{ url_for('dashboard') }}">Dashboard</a>
-                <a href="{{ url_for('control_center') }}#operator-form">Operations</a>
-                <a href="{{ url_for('dashboard') }}#suggestions-list">AI Advisory</a>
+            <nav class="d-flex gap-3">
+                <a href="{{ url_for('index') }}"          class="btn btn-outline-secondary text-light border-secondary"><i class="fa-solid fa-house me-2"></i>Home</a>
+                <a href="{{ url_for('dashboard') }}"      class="btn neon-btn"><i class="fa-solid fa-gauge me-2"></i>Dashboard</a>
+                <a href="{{ url_for('control_center') }}" class="btn btn-outline-secondary text-light border-secondary"><i class="fa-solid fa-sliders me-2"></i>Control Center</a>
+                <a href="simulation1.html"                class="btn btn-outline-secondary text-light border-secondary" target="_blank"><i class="fa-solid fa-desktop me-2"></i>Simulation</a>
+                <a href="traffic-analytics.html"          class="btn btn-outline-secondary text-light border-secondary" target="_blank"><i class="fa-solid fa-chart-line me-2"></i>Analytics</a>
             </nav>
-        </header>
+        </div>
+    </header>
 
-        <section class="hero panel">
-            <div>
-                <span class="eyebrow">Interactive HTML Dashboard</span>
-                <h1>Smart Traffic Control Console</h1>
-                <p>Use this HTML dashboard to control the live source, upload traffic footage, watch detections in real time, and receive AI suggestions for Indian urban roads.</p>
-            </div>
-            <div class="hero-status">
-                <div class="status-pill">
-                    <span>Advisor</span>
-                    <strong id="advisor-source">Booting</strong>
-                    <small id="advisor-status">Checking cloud and offline providers</small>
-                </div>
-                <div class="status-pill">
-                    <span>Vision</span>
-                    <strong id="vision-backend">Loading</strong>
-                    <small id="vision-note">Detector is warming up</small>
-                </div>
-                <div class="status-pill">
-                    <span>Source</span>
-                    <strong id="source-status">Starting</strong>
-                    <small id="source-value">{{ config.source_type }} / {{ config.source_value }}</small>
-                </div>
-            </div>
-        </section>
+    <div class="container-fluid px-4 pb-5">
 
-        <section class="panel guide-card">
-            <div class="guide-head">
-                <h2>How To Use This Page</h2>
-                <p>Run these steps in order to quickly validate your setup and start traffic analysis.</p>
+        <!-- Status Banner -->
+        <div id="banner" class="glass-panel text-center py-2 px-4 mx-auto mb-4" style="max-width:700px; animation-delay:0.1s;">
+            <div class="fw-bold text-neon">
+                <i class="fa-solid fa-broadcast-tower me-2"></i>
+                <span id="connection-status">Connecting to AI backend</span>
             </div>
-            <div class="guide-grid">
-                <article class="guide-step">
-                    <strong>1. Pick Source</strong>
-                    <p>Use camera index, local video/image path, or upload media from the right panel.</p>
-                </article>
-                <article class="guide-step">
-                    <strong>2. Confirm Live Data</strong>
-                    <p>Wait for vehicles, congestion, and FPS cards to move from zero values.</p>
-                </article>
-                <article class="guide-step">
-                    <strong>3. Review Advice</strong>
-                    <p>Read suggestions, alerts, and corridor pressure cards before taking action.</p>
-                </article>
-            </div>
-            <div id="connection-banner" class="connection-banner" data-state="syncing">
-                <span id="connection-dot" class="connection-dot" data-state="syncing"></span>
-                <div class="connection-copy">
-                    <strong id="connection-status">Connecting</strong>
-                    <small id="connection-note">Starting backend link check.</small>
-                </div>
-            </div>
-        </section>
+            <div id="connection-note" class="small text-mutted mt-1">Starting backend link check.</div>
+            <div id="connection-banner" data-state="syncing" style="display:none"></div>
+            <span id="connection-dot" data-state="syncing" style="display:none"></span>
+        </div>
 
-        <section class="panel department-panel">
-            <div class="guide-head">
-                <h2>Department Blocks</h2>
-                <p>Each block reflects one team using this dashboard in daily operations.</p>
-            </div>
-            <div class="department-grid">
-                <article class="department-card">
-                    <strong>Traffic Operations</strong>
-                    <p>Monitors live vehicles, queues, and corridor pressure for real-time junction decisions.</p>
-                </article>
-                <article class="department-card">
-                    <strong>Emergency Response</strong>
-                    <p>Uses alerts and source controls to prioritize incident corridors and maintain safety gaps.</p>
-                </article>
-                <article class="department-card">
-                    <strong>Data and Analytics</strong>
-                    <p>Tracks congestion, throughput, and historical trends to validate operational performance.</p>
-                </article>
-                <article class="department-card">
-                    <strong>AI Advisory Cell</strong>
-                    <p>Reviews recommendations and risk notes before applying strategy changes in the field.</p>
-                </article>
-            </div>
-        </section>
+        <div class="row w-100 m-0">
 
-        <section class="layout">
-            <div class="main-column">
-                <article class="panel video-card">
-                    <div class="card-head">
-                        <div>
-                            <h2>Live Traffic Feed</h2>
-                            <p id="controller-note">Waiting for the first processed frame.</p>
+            <!-- LEFT: Source Controls -->
+            <div class="col-3 pe-3">
+                <div class="glass-panel p-4 h-100 overflow-auto stagger-1" style="max-height:calc(100vh - 180px);">
+
+                    <span class="eyebrow">Input Control</span>
+                    <h4 class="mb-3 text-neon mt-2">Source &amp; Upload</h4>
+
+                    <!-- System status -->
+                    <div class="section-title"><i class="fa-solid fa-satellite-dish me-2"></i>System Status</div>
+                    <div class="glass-card mb-3">
+                        <div class="row g-2 text-center small">
+                            <div class="col-4 border-end border-secondary border-opacity-25">
+                                <div class="text-mutted" style="font-size:.7rem;">ADVISOR</div>
+                                <div id="advisor-source" class="fw-bold text-light">Booting</div>
+                            </div>
+                            <div class="col-4 border-end border-secondary border-opacity-25">
+                                <div class="text-mutted" style="font-size:.7rem;">VISION</div>
+                                <div id="vision-backend" class="fw-bold text-light">Loading</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="text-mutted" style="font-size:.7rem;">SOURCE</div>
+                                <div id="source-status" class="fw-bold text-light">--</div>
+                            </div>
                         </div>
-                        <div class="chip-group">
-                            <span class="chip" id="recommended-corridor">Hot corridor: --</span>
-                            <span class="chip accent" id="network-mode">Offline-safe mode</span>
+                        <div id="advisor-status" class="small text-mutted mt-2 text-center" style="font-size:.7rem;">Checking cloud and offline providers</div>
+                        <div id="vision-note"    class="small text-mutted text-center"         style="font-size:.7rem;">Detector is warming up</div>
+                        <div id="source-value"   class="small text-mutted text-center"         style="font-size:.7rem;">{{ config.source_type }} / {{ config.source_value }}</div>
+                    </div>
+
+                    <!-- Quick camera buttons -->
+                    <div class="section-title"><i class="fa-solid fa-bolt me-2"></i>Quick Actions</div>
+                    <div class="glass-card mb-3">
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-outline-secondary btn-sm quick-source-button" data-source-type="camera" data-source-value="0">
+                                <i class="fa-solid fa-camera me-2"></i>Use Camera 0
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm quick-source-button" data-source-type="camera" data-source-value="1">
+                                <i class="fa-solid fa-camera me-2"></i>Use Camera 1
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="refresh-state-button">
+                                <i class="fa-solid fa-rotate me-2"></i>Refresh Dashboard
+                            </button>
                         </div>
                     </div>
-                    <div class="video-frame">
-                        <img src="{{ url_for('video_feed') }}" alt="Live traffic stream">
-                    </div>
-                </article>
 
-                <section class="metrics-grid">
-                    <article class="metric-card panel-lite">
-                        <div class="metric-label">Live Vehicles</div>
-                        <div id="metric-vehicles" class="metric-value">0</div>
-                        <div class="metric-sub">Vehicle detections in the current frame</div>
-                    </article>
-                    <article class="metric-card panel-lite">
-                        <div class="metric-label">Congestion Index</div>
-                        <div id="metric-congestion" class="metric-value">0.0</div>
-                        <div class="metric-sub">0 is clear, 100 is critical</div>
-                    </article>
-                    <article class="metric-card panel-lite">
-                        <div class="metric-label">Mobility Score</div>
-                        <div id="metric-mobility" class="metric-value">0.0</div>
-                        <div class="metric-sub">Flow quality based on live movement</div>
-                    </article>
-                    <article class="metric-card panel-lite">
-                        <div class="metric-label">Throughput / Min</div>
-                        <div id="metric-throughput" class="metric-value">0.0</div>
-                        <div class="metric-sub">Tracks exiting the monitored scene</div>
-                    </article>
-                    <article class="metric-card panel-lite">
-                        <div class="metric-label">FPS</div>
-                        <div id="metric-fps" class="metric-value">0.0</div>
-                        <div class="metric-sub">Current backend processing speed</div>
-                    </article>
-                    <article class="metric-card panel-lite">
-                        <div class="metric-label">Updated</div>
-                        <div id="metric-updated" class="metric-value">--</div>
-                        <div class="metric-sub">Latest analytics timestamp</div>
-                    </article>
-                </section>
-
-                <article class="panel corridor-card">
-                    <div class="card-head">
-                        <div>
-                            <h2>Corridor Pressure</h2>
-                            <p>North, east, south, and west sectors inherit the simulation concept and estimate where intervention is needed first.</p>
+                    <!-- Source form -->
+                    <div class="section-title"><i class="fa-solid fa-sliders me-2"></i>Switch Source</div>
+                    <form id="source-form">
+                        <div class="glass-card mb-2">
+                            <div class="mb-3">
+                                <label for="source-type" class="form-label small mb-1">Source Type</label>
+                                <select id="source-type" name="source_type" class="form-select form-select-sm">
+                                    <option value="camera" {% if config.source_type == 'camera' %}selected{% endif %}>📷 Camera</option>
+                                    <option value="video"  {% if config.source_type == 'video'  %}selected{% endif %}>🎬 Video File</option>
+                                    <option value="image"  {% if config.source_type == 'image'  %}selected{% endif %}>🖼 Image File</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="source-input" class="form-label small mb-1">Source Value</label>
+                                <input id="source-input" name="source_value" type="text"
+                                       class="form-control form-control-sm"
+                                       value="{{ config.source_value }}"
+                                       placeholder="e.g. 0 or absolute file path">
+                                <div class="small text-mutted mt-1" style="font-size:.7rem;">Camera: <code>0</code> · File: full path</div>
+                            </div>
+                            <button type="submit" class="btn primary-btn w-100">
+                                <i class="fa-solid fa-bolt me-2"></i>Apply Source
+                            </button>
                         </div>
-                    </div>
-                    <div class="corridor-grid">
-                        <div class="corridor-item">
-                            <div class="corridor-top"><strong>North</strong><span id="corridor-north-value">0.0</span></div>
-                            <div class="bar"><div id="corridor-north-fill" class="bar-fill north"></div></div>
-                            <div id="corridor-north-meta" class="corridor-meta">No pressure yet</div>
-                        </div>
-                        <div class="corridor-item">
-                            <div class="corridor-top"><strong>East</strong><span id="corridor-east-value">0.0</span></div>
-                            <div class="bar"><div id="corridor-east-fill" class="bar-fill east"></div></div>
-                            <div id="corridor-east-meta" class="corridor-meta">No pressure yet</div>
-                        </div>
-                        <div class="corridor-item">
-                            <div class="corridor-top"><strong>South</strong><span id="corridor-south-value">0.0</span></div>
-                            <div class="bar"><div id="corridor-south-fill" class="bar-fill south"></div></div>
-                            <div id="corridor-south-meta" class="corridor-meta">No pressure yet</div>
-                        </div>
-                        <div class="corridor-item">
-                            <div class="corridor-top"><strong>West</strong><span id="corridor-west-value">0.0</span></div>
-                            <div class="bar"><div id="corridor-west-fill" class="bar-fill west"></div></div>
-                            <div id="corridor-west-meta" class="corridor-meta">No pressure yet</div>
-                        </div>
-                    </div>
-                </article>
-
-                <section class="chart-grid">
-                    <article class="panel-lite chart-card">
-                        <div class="chart-head">
-                            <h3>Vehicle Trend</h3>
-                            <span id="chart-vehicles-stat">Waiting</span>
-                        </div>
-                        <div id="chart-vehicles" class="chart-frame"></div>
-                    </article>
-                    <article class="panel-lite chart-card">
-                        <div class="chart-head">
-                            <h3>Congestion Trend</h3>
-                            <span id="chart-congestion-stat">Waiting</span>
-                        </div>
-                        <div id="chart-congestion" class="chart-frame"></div>
-                    </article>
-                    <article class="panel-lite chart-card">
-                        <div class="chart-head">
-                            <h3>Throughput Trend</h3>
-                            <span id="chart-throughput-stat">Waiting</span>
-                        </div>
-                        <div id="chart-throughput" class="chart-frame"></div>
-                    </article>
-                    <article class="panel-lite chart-card">
-                        <div class="chart-head">
-                            <h3>Mobility Trend</h3>
-                            <span id="chart-mobility-stat">Waiting</span>
-                        </div>
-                        <div id="chart-mobility" class="chart-frame"></div>
-                    </article>
-                </section>
-            </div>
-
-            <aside class="side-column">
-                <article class="panel side-card">
-                    <div class="card-head">
-                        <div>
-                            <h2>Quick Actions</h2>
-                            <p>Common controls for faster interaction with the traffic AI backend.</p>
-                        </div>
-                    </div>
-                    <div class="quick-actions">
-                        <button type="button" class="secondary-button quick-source-button" data-source-type="camera" data-source-value="0">Use Camera 0</button>
-                        <button type="button" class="secondary-button quick-source-button" data-source-type="camera" data-source-value="1">Use Camera 1</button>
-                        <button type="button" class="secondary-button" id="refresh-state-button">Refresh Dashboard</button>
-                    </div>
-                </article>
-
-                <article class="panel side-card">
-                    <div class="card-head">
-                        <div>
-                            <h2>Source Control</h2>
-                            <p>Switch between camera, video, and image without restarting the app.</p>
-                        </div>
-                    </div>
-                    <form id="source-form" class="stack">
-                        <label for="source-type">Source Type</label>
-                        <select id="source-type" name="source_type">
-                            <option value="camera" {% if config.source_type == 'camera' %}selected{% endif %}>Camera</option>
-                            <option value="video" {% if config.source_type == 'video' %}selected{% endif %}>Video File</option>
-                            <option value="image" {% if config.source_type == 'image' %}selected{% endif %}>Image File</option>
-                        </select>
-                        <label for="source-input">Source Value</label>
-                        <input id="source-input" name="source_value" type="text" value="{{ config.source_value }}" placeholder="Camera index or absolute path">
-                        <p class="input-help">Camera example: <code>0</code> | File example: <code>D:\traffic\junction.mp4</code></p>
-                        <button type="submit" class="primary-button">Apply Source</button>
                     </form>
-                    <div id="form-feedback" class="feedback" aria-live="polite">No changes submitted yet.</div>
-                </article>
+                    <div id="form-feedback" class="small text-mutted mb-3">No changes submitted yet.</div>
 
-                <article class="panel side-card">
-                    <div class="card-head">
-                        <div>
-                            <h2>Upload Media</h2>
-                            <p>Drop a traffic image or video here and the dashboard will switch automatically.</p>
+                    <!-- Upload -->
+                    <div class="section-title"><i class="fa-solid fa-upload me-2"></i>Upload Media</div>
+                    <form id="upload-form">
+                        <div class="glass-card">
+                            <div class="mb-2">
+                                <input id="upload-file" name="file" type="file" class="form-control form-control-sm"
+                                       accept=".jpg,.jpeg,.png,.bmp,.webp,.mp4,.avi,.mov,.mkv,.wmv,.m4v">
+                            </div>
+                            <button type="submit" class="btn btn-outline-secondary w-100">
+                                <i class="fa-solid fa-file-arrow-up me-2"></i>Upload &amp; Switch
+                            </button>
                         </div>
-                    </div>
-                    <form id="upload-form" class="stack">
-                        <input id="upload-file" name="file" type="file" accept=".jpg,.jpeg,.png,.bmp,.webp,.mp4,.avi,.mov,.mkv,.wmv,.m4v">
-                        <button type="submit" class="secondary-button">Upload and Use</button>
                     </form>
-                </article>
 
-                <article class="panel side-card">
-                    <div class="card-head">
+                </div>
+            </div>
+
+            <!-- CENTRE: Live Feed + KPIs + Charts -->
+            <div class="col-6 px-3">
+
+                <div class="glass-panel p-4 mb-4 stagger-2">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
                         <div>
-                            <h2>AI Suggestions</h2>
-                            <p>OpenAI is used when available, while local offline logic remains active during network issues.</p>
+                            <span class="eyebrow">Live Feed</span>
+                            <h4 class="mb-1">Traffic Camera</h4>
+                            <div id="controller-note" class="small text-mutted">Waiting for the first processed frame.</div>
+                        </div>
+                        <div class="d-flex gap-2 flex-wrap justify-content-end">
+                            <span class="status-pill" id="recommended-corridor">Hot: --</span>
+                            <span class="status-pill" id="network-mode" style="background:rgba(0,255,136,.15);color:#00ff88;border-color:#00ff88;">Offline-safe</span>
                         </div>
                     </div>
-                    <ul id="suggestions-list" class="bullet-list">
-                        <li>Waiting for the first live advisory.</li>
-                    </ul>
-                    <div id="suggestion-warning" class="warning-box" aria-live="polite">Risk information will appear here.</div>
-                </article>
 
-                <article class="panel side-card">
-                    <div class="card-head">
-                        <div>
-                            <h2>Alerts</h2>
-                            <p>Operational warnings from live analytics and detection behavior.</p>
+                    <div class="rounded-3 overflow-hidden border border-secondary border-opacity-25 mb-4"
+                         style="background:rgba(0,0,0,.6);">
+                        <img src="{{ url_for('video_feed') }}" alt="Live traffic stream" class="w-100 d-block">
+                    </div>
+
+                    <!-- 6 KPI tiles -->
+                    <div class="dashboard-grid">
+                        <div class="glass-card text-center p-2">
+                            <div class="text-mutted text-uppercase" style="font-size:.65rem;">Live Vehicles</div>
+                            <div id="metric-vehicles" class="metric-value">0</div>
+                            <div class="text-mutted" style="font-size:.65rem;">Detections</div>
+                        </div>
+                        <div class="glass-card text-center p-2">
+                            <div class="text-mutted text-uppercase" style="font-size:.65rem;">Congestion</div>
+                            <div id="metric-congestion" class="metric-value">0.0</div>
+                            <div class="text-mutted" style="font-size:.65rem;">0 → 100</div>
+                        </div>
+                        <div class="glass-card text-center p-2">
+                            <div class="text-mutted text-uppercase" style="font-size:.65rem;">Mobility</div>
+                            <div id="metric-mobility" class="metric-value">0.0</div>
+                            <div class="text-mutted" style="font-size:.65rem;">Flow quality</div>
+                        </div>
+                        <div class="glass-card text-center p-2">
+                            <div class="text-mutted text-uppercase" style="font-size:.65rem;">Throughput/min</div>
+                            <div id="metric-throughput" class="metric-value">0.0</div>
+                            <div class="text-mutted" style="font-size:.65rem;">Exits</div>
+                        </div>
+                        <div class="glass-card text-center p-2">
+                            <div class="text-mutted text-uppercase" style="font-size:.65rem;">FPS</div>
+                            <div id="metric-fps" class="metric-value">0.0</div>
+                            <div class="text-mutted" style="font-size:.65rem;">Processing</div>
+                        </div>
+                        <div class="glass-card text-center p-2">
+                            <div class="text-mutted text-uppercase" style="font-size:.65rem;">Updated</div>
+                            <div id="metric-updated" class="metric-value" style="font-size:1.1rem;">--</div>
+                            <div class="text-mutted" style="font-size:.65rem;">Timestamp</div>
                         </div>
                     </div>
-                    <ul id="alerts-list" class="bullet-list">
-                        <li>No active alerts.</li>
-                    </ul>
-                </article>
+                </div>
 
-                <article class="panel side-card">
-                    <div class="card-head">
-                        <div>
-                            <h2>Detected Classes</h2>
-                            <p>Live breakdown of the scene, useful for mixed Indian traffic interpretation.</p>
+                <!-- Charts 2×2 -->
+                <div class="row g-3 stagger-3">
+                    <div class="col-6">
+                        <div class="glass-panel p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">Vehicle Trend</h6>
+                                <span id="chart-vehicles-stat" class="small text-mutted">Waiting</span>
+                            </div>
+                            <div id="chart-vehicles" class="chart-frame"></div>
                         </div>
                     </div>
-                    <ul id="breakdown-list" class="metric-list">
-                        <li><span>Waiting</span><strong>0</strong></li>
-                    </ul>
-                </article>
-            </aside>
-        </section>
+                    <div class="col-6">
+                        <div class="glass-panel p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">Congestion Trend</h6>
+                                <span id="chart-congestion-stat" class="small text-mutted">Waiting</span>
+                            </div>
+                            <div id="chart-congestion" class="chart-frame"></div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="glass-panel p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">Throughput Trend</h6>
+                                <span id="chart-throughput-stat" class="small text-mutted">Waiting</span>
+                            </div>
+                            <div id="chart-throughput" class="chart-frame"></div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="glass-panel p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">Mobility Trend</h6>
+                                <span id="chart-mobility-stat" class="small text-mutted">Waiting</span>
+                            </div>
+                            <div id="chart-mobility" class="chart-frame"></div>
+                        </div>
+                    </div>
+                </div>
 
-        <footer class="site-footer panel-lite">
-            <strong>Smart Traffic Management System</strong>
-            <span>Dashboard view for operations, emergency handling, analytics, and AI-assisted decisions.</span>
-        </footer>
-    </main>
+            </div>
 
-    <div class="floating-copyright">&copy; 2026 Smart Traffic Management System &nbsp;|&nbsp; Urban Congestion AI Platform</div>
+            <!-- RIGHT: Corridor + Advisory -->
+            <div class="col-3 ps-3">
+                <div class="glass-panel p-4 h-100 overflow-auto stagger-2" style="max-height:calc(100vh - 180px);">
 
+                    <span class="eyebrow">Real-Time Telemetry</span>
+                    <h4 class="mb-3 text-neon mt-2">Corridor &amp; Advisory</h4>
+
+                    <!-- Corridor bars -->
+                    <div class="section-title"><i class="fa-solid fa-arrows-to-circle me-2"></i>Corridor Pressure</div>
+
+                    <div class="corridor mb-3">
+                        <div class="corridor-head">
+                            <span><i class="fa-solid fa-arrow-up me-1" style="color:var(--accent-neon);"></i>North</span>
+                            <span id="corridor-north-value" class="text-neon">0.0</span>
+                        </div>
+                        <div class="corridor-meta"><span id="corridor-north-meta">No pressure yet</span></div>
+                        <div class="bar"><div id="corridor-north-fill" class="bar-fill north"></div></div>
+                    </div>
+                    <div class="corridor mb-3">
+                        <div class="corridor-head">
+                            <span><i class="fa-solid fa-arrow-right me-1" style="color:#00ff88;"></i>East</span>
+                            <span id="corridor-east-value" class="text-green">0.0</span>
+                        </div>
+                        <div class="corridor-meta"><span id="corridor-east-meta">No pressure yet</span></div>
+                        <div class="bar"><div id="corridor-east-fill" class="bar-fill east"></div></div>
+                    </div>
+                    <div class="corridor mb-3">
+                        <div class="corridor-head">
+                            <span><i class="fa-solid fa-arrow-down me-1" style="color:#f97316;"></i>South</span>
+                            <span id="corridor-south-value" style="color:#f97316;">0.0</span>
+                        </div>
+                        <div class="corridor-meta"><span id="corridor-south-meta">No pressure yet</span></div>
+                        <div class="bar"><div id="corridor-south-fill" class="bar-fill south"></div></div>
+                    </div>
+                    <div class="corridor mb-4">
+                        <div class="corridor-head">
+                            <span><i class="fa-solid fa-arrow-left me-1" style="color:#f472b6;"></i>West</span>
+                            <span id="corridor-west-value" style="color:#f472b6;">0.0</span>
+                        </div>
+                        <div class="corridor-meta"><span id="corridor-west-meta">No pressure yet</span></div>
+                        <div class="bar"><div id="corridor-west-fill" class="bar-fill west"></div></div>
+                    </div>
+
+                    <!-- AI Suggestions -->
+                    <div class="section-title"><i class="fa-solid fa-brain me-2"></i>AI Suggestions</div>
+                    <div class="glass-card mb-3">
+                        <ul id="suggestions-list" class="list-unstyled mb-2" style="font-size:.82rem;">
+                            <li class="text-mutted">Waiting for the first live advisory.</li>
+                        </ul>
+                        <div id="suggestion-warning" class="small border border-danger border-opacity-25 rounded p-2 text-danger-emphasis"
+                             style="background:rgba(255,51,102,.07); font-size:.75rem;">
+                            Risk information will appear here.
+                        </div>
+                    </div>
+
+                    <!-- Alerts -->
+                    <div class="section-title"><i class="fa-solid fa-triangle-exclamation me-2"></i>Alerts</div>
+                    <div class="glass-card mb-3">
+                        <ul id="alerts-list" class="list-unstyled mb-0" style="font-size:.82rem;">
+                            <li class="text-mutted">No active alerts.</li>
+                        </ul>
+                    </div>
+
+                    <!-- Detected Classes -->
+                    <div class="section-title"><i class="fa-solid fa-car me-2"></i>Detected Classes</div>
+                    <div class="glass-card">
+                        <ul id="breakdown-list" class="list-unstyled mb-0" style="font-size:.82rem;">
+                            <li class="d-flex justify-content-between"><span class="text-mutted">Waiting</span><strong>0</strong></li>
+                        </ul>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Floating copyright -->
+    <div class="position-fixed bottom-0 start-50 translate-middle-x mb-2 z-3" style="pointer-events:none;">
+        <div class="bg-dark bg-opacity-75 border border-secondary border-opacity-50 text-mutted px-3 py-1 rounded-pill small"
+             style="backdrop-filter:blur(5px); font-size:.7rem;">
+            &copy; 2026 Smart Traffic Management System &nbsp;|&nbsp; Urban Congestion AI Platform
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+    <script>
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                const p = document.getElementById('preloader');
+                if (p) { p.style.opacity = '0'; setTimeout(() => p.remove(), 500); }
+            }, 800);
+        });
+    </script>
     <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>
