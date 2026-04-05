@@ -1349,7 +1349,7 @@
             eventChip.className = appState.sourceMode === "import" || appState.sourceMode === "stored" ? "chip import" : "chip";
 
             document.getElementById("insight-green").textContent =
-                `${payload.meta.activeGreen || "--"} axis, ${payload.meta.signalPhase || "--"} phase.`;
+                `${payload.meta.activeGreen || "--"} corridor, ${payload.meta.signalPhase || "--"} phase.`;
             document.getElementById("insight-mode").textContent =
                 payload.meta.controlMode === "adaptive" && safeNumber(payload.meta.controllerTargetGreenMs) > 0
                     ? `${payload.meta.controlMode} control with ${((payload.meta.controllerTargetGreenMs || 0) / 1000).toFixed(1)} s live target, ${((payload.meta.controllerAutoBaseGreenMs || 0) / 1000).toFixed(1)} s base, ${payload.meta.controllerCongestionBand || "low"} congestion band, and next candidate ${payload.meta.nextCandidate || "--"}.`

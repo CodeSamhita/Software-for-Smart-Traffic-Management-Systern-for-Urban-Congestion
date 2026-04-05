@@ -1,8 +1,29 @@
+const REFRESH_BASE_MS = 1500;
+const REFRESH_MAX_MS = 8000;
+const REQUEST_TIMEOUT_MS = 7000;
+
+let refreshTimer = null;
+let refreshInFlight = false;
+let refreshFailures = 0;
+
 function setText(id, value) {
     const element = document.getElementById(id);
     if (element) {
         element.textContent = value;
     }
+}
+
+function setConnectionState(state, note) {
+    const banner = document.getElementById("connection-banner");
+    const dot = document.getElementById("connection-dot");
+    if (banner) {
+        banner.dataset.state = state;
+    }
+    if (dot) {
+        dot.dataset.state = state;
+    }
+    setText("connection-status", state === "online" ? "Connected" : state === "syncing" ? "Syncing" : "Reconnecting");
+    setText("connection-note", note);
 }
 
 function formatNumber(value, digits = 1) {
@@ -161,29 +182,83 @@ function updateState(state) {
     renderChart("chart-mobility", state.timeline || [], "mobility", "#f472b6", "chart-mobility-stat");
 }
 
-async function refreshState() {
+function nextRefreshDelay() {
+    return Math.min(REFRESH_MAX_MS, REFRESH_BASE_MS * (2 ** Math.min(refreshFailures, 3)));
+}
+
+function scheduleRefresh(delayMs = REFRESH_BASE_MS) {
+    if (refreshTimer) {
+        window.clearTimeout(refreshTimer);
+    }
+    refreshTimer = window.setTimeout(() => {
+        refreshState(false);
+    }, delayMs);
+}
+
+async function safeFetchJson(url, options = {}, timeoutMs = REQUEST_TIMEOUT_MS) {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
     try {
-        const response = await fetch("/api/state", { cache: "no-store" });
+        const response = await fetch(url, {
+            ...options,
+            signal: controller.signal,
+        });
+        const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+            throw new Error(payload.error || `HTTP ${response.status}`);
         }
-        const state = await response.json();
-        updateState(state);
+        return payload;
     } catch (error) {
+        if (error && error.name === "AbortError") {
+            throw new Error("request timed out");
+        }
+        throw error;
+    } finally {
+        window.clearTimeout(timeoutId);
+    }
+}
+
+async function refreshState(manual = false) {
+    if (refreshInFlight) {
+        if (manual) {
+            setText("form-feedback", "Refresh already in progress.");
+        }
+        return;
+    }
+    refreshInFlight = true;
+    setConnectionState("syncing", manual ? "Manual refresh started." : "Updating analytics.");
+    try {
+        const state = await safeFetchJson("/api/state", { cache: "no-store" });
+        updateState(state);
+        refreshFailures = 0;
+        setConnectionState("online", `Last updated at ${new Date().toLocaleTimeString()}.`);
+    } catch (error) {
+        refreshFailures += 1;
+        const retryInSeconds = Math.max(1, Math.round(nextRefreshDelay() / 1000));
+        setConnectionState("error", `Refresh failed. Retrying in ${retryInSeconds}s.`);
         setText("form-feedback", `State refresh failed: ${error.message}`);
+    } finally {
+        refreshInFlight = false;
+        scheduleRefresh(nextRefreshDelay());
     }
 }
 
 async function submitSource(event) {
     event.preventDefault();
-    const sourceType = document.getElementById("source-type").value;
-    const sourceValue = document.getElementById("source-input").value.trim();
+    const sourceTypeElement = document.getElementById("source-type");
+    const sourceInputElement = document.getElementById("source-input");
+    if (!sourceTypeElement || !sourceInputElement) {
+        return;
+    }
+    const sourceType = sourceTypeElement.value;
+    const sourceValue = sourceInputElement.value.trim();
     await applySource(sourceType, sourceValue);
 }
 
 async function applySource(sourceType, sourceValue) {
+    setConnectionState("syncing", "Applying source update.");
     try {
-        const response = await fetch("/api/source", {
+        const payload = await safeFetchJson("/api/source", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -191,15 +266,15 @@ async function applySource(sourceType, sourceValue) {
                 source_value: sourceValue,
             }),
         });
-        const payload = await response.json();
-        if (!response.ok || !payload.ok) {
-            throw new Error(payload.error || `HTTP ${response.status}`);
-        }
         setText("form-feedback", `Source switched to ${sourceType}.`);
         if (payload.state) {
             updateState(payload.state);
         }
+        refreshFailures = 0;
+        setConnectionState("online", "Source updated successfully.");
+        scheduleRefresh(300);
     } catch (error) {
+        setConnectionState("error", "Source update failed.");
         setText("form-feedback", `Source change failed: ${error.message}`);
     }
 }
@@ -207,40 +282,49 @@ async function applySource(sourceType, sourceValue) {
 async function submitUpload(event) {
     event.preventDefault();
     const fileInput = document.getElementById("upload-file");
-    if (!fileInput.files.length) {
+    if (!fileInput || !fileInput.files.length) {
         setText("form-feedback", "Select a file before uploading.");
         return;
     }
 
     const formData = new FormData();
     formData.append("file", fileInput.files[0]);
+    setConnectionState("syncing", "Uploading media.");
 
     try {
-        const response = await fetch("/api/upload", {
+        const payload = await safeFetchJson("/api/upload", {
             method: "POST",
             body: formData,
-        });
-        const payload = await response.json();
-        if (!response.ok || !payload.ok) {
-            throw new Error(payload.error || `HTTP ${response.status}`);
-        }
+        }, 20000);
         setText("form-feedback", `Uploaded file switched into ${payload.source_type} mode.`);
-        document.getElementById("source-type").value = payload.source_type;
-        document.getElementById("source-input").value = payload.path;
+
+        const sourceTypeElement = document.getElementById("source-type");
+        const sourceInputElement = document.getElementById("source-input");
+        if (sourceTypeElement) {
+            sourceTypeElement.value = payload.source_type;
+        }
+        if (sourceInputElement) {
+            sourceInputElement.value = payload.path;
+        }
         if (payload.state) {
             updateState(payload.state);
         }
+        refreshFailures = 0;
+        setConnectionState("online", "Upload completed successfully.");
+        scheduleRefresh(300);
     } catch (error) {
+        setConnectionState("error", "Upload failed.");
         setText("form-feedback", `Upload failed: ${error.message}`);
     }
 }
 
 function updateSourcePlaceholder() {
-    const sourceType = document.getElementById("source-type").value;
+    const sourceTypeElement = document.getElementById("source-type");
     const input = document.getElementById("source-input");
-    if (!input) {
+    if (!sourceTypeElement || !input) {
         return;
     }
+    const sourceType = sourceTypeElement.value;
     if (sourceType === "camera") {
         input.placeholder = "Camera index, for example 0";
     } else if (sourceType === "video") {
@@ -268,19 +352,25 @@ document.addEventListener("DOMContentLoaded", () => {
         updateSourcePlaceholder();
     }
     if (refreshStateButton) {
-        refreshStateButton.addEventListener("click", refreshState);
+        refreshStateButton.addEventListener("click", () => refreshState(true));
     }
     for (const button of quickSourceButtons) {
         button.addEventListener("click", async () => {
             const sourceTypeValue = button.dataset.sourceType || "camera";
             const sourceValue = button.dataset.sourceValue || "0";
-            document.getElementById("source-type").value = sourceTypeValue;
-            document.getElementById("source-input").value = sourceValue;
+            const sourceTypeElement = document.getElementById("source-type");
+            const sourceInputElement = document.getElementById("source-input");
+            if (sourceTypeElement) {
+                sourceTypeElement.value = sourceTypeValue;
+            }
+            if (sourceInputElement) {
+                sourceInputElement.value = sourceValue;
+            }
             updateSourcePlaceholder();
             await applySource(sourceTypeValue, sourceValue);
         });
     }
 
-    refreshState();
-    window.setInterval(refreshState, 1500);
+    setConnectionState("syncing", "Connecting to backend.");
+    refreshState(true);
 });

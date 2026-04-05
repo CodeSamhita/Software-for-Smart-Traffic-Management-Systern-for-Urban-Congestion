@@ -13,6 +13,7 @@ from traffic_ai.config import AppConfig
 from traffic_ai.models import Detection, SuggestionPacket, TrafficSnapshot
 from traffic_ai.services.advisors import AdvisoryOrchestrator, OllamaAdvisor, OpenAIAdvisor, RuleBasedAdvisor
 from traffic_ai.services.analytics import TrafficAnalyticsEngine
+from traffic_ai.services.presentation import PresentationFeedService
 from traffic_ai.services.source_manager import FrameSourceManager
 from traffic_ai.vision.detector import build_detector
 from traffic_ai.vision.tracker import CentroidTracker
@@ -33,6 +34,22 @@ class TrafficProcessor:
         self.tracker = CentroidTracker()
         self.analytics = TrafficAnalyticsEngine(history_limit=config.history_limit)
         self.advisors = self._build_advisors(config)
+        self._operator_state = {
+            "zone_center_x": 0.5,
+            "zone_center_y": 0.5,
+            "operation_mode": "adaptive",
+            "selected_operation": "follow_ai",
+            "override_corridor": "none",
+            "manual_priority_corridor": "none",
+            "simulation_paused": False,
+            "directional_only_mode": True,
+            "simulation_speed": 1.0,
+            "note": "",
+        }
+        self.analytics.update_zone_center(
+            self._operator_state["zone_center_x"],
+            self._operator_state["zone_center_y"],
+        )
 
         self._lock = threading.RLock()
         self._source_lock = threading.Lock()
@@ -51,17 +68,15 @@ class TrafficProcessor:
         self._last_frame_timestamp = time.perf_counter()
         self._fps_samples: deque[float] = deque(maxlen=24)
         self._last_advisor_at = 0.0
+        self._presentation_service: PresentationFeedService | None = None
+
+    def attach_presentation_service(self, presentation_service: PresentationFeedService) -> None:
+        self._presentation_service = presentation_service
 
     def start(self) -> None:
         if self._running:
             return
         self._running = True
-
-        try:
-            with self._source_lock:
-                self.source_manager.open(self.config.source_type, self.config.source_value)
-        except Exception as exc:
-            logger.warning("Initial source open failed: %s", exc)
 
         self._thread = threading.Thread(target=self._run_loop, name="traffic-processor", daemon=True)
         self._thread.start()
@@ -81,7 +96,58 @@ class TrafficProcessor:
 
     def current_state(self) -> dict[str, object]:
         with self._lock:
-            return self._latest_snapshot.to_dict()
+            payload = self._latest_snapshot.to_dict()
+            payload["operator"] = dict(self._operator_state)
+            payload["simulation"] = self._build_simulation_state(self._latest_snapshot)
+            return payload
+
+    def update_operator_state(self, payload: dict[str, object]) -> dict[str, object]:
+        with self._lock:
+            if "zone_center_x" in payload:
+                try:
+                    self._operator_state["zone_center_x"] = min(0.8, max(0.2, float(payload["zone_center_x"])))
+                except (TypeError, ValueError):
+                    pass
+            if "zone_center_y" in payload:
+                try:
+                    self._operator_state["zone_center_y"] = min(0.8, max(0.2, float(payload["zone_center_y"])))
+                except (TypeError, ValueError):
+                    pass
+            if "simulation_speed" in payload:
+                try:
+                    self._operator_state["simulation_speed"] = min(2.0, max(0.5, float(payload["simulation_speed"])))
+                except (TypeError, ValueError):
+                    pass
+            if "operation_mode" in payload:
+                self._operator_state["operation_mode"] = str(payload["operation_mode"]).strip().lower() or "adaptive"
+            if "selected_operation" in payload:
+                self._operator_state["selected_operation"] = str(payload["selected_operation"]).strip().lower() or "follow_ai"
+            if "override_corridor" in payload:
+                self._operator_state["override_corridor"] = str(payload["override_corridor"]).strip().lower() or "none"
+            if "manual_priority_corridor" in payload:
+                self._operator_state["manual_priority_corridor"] = (
+                    str(payload["manual_priority_corridor"]).strip().lower() or "none"
+                )
+            if "simulation_paused" in payload:
+                raw_value = payload["simulation_paused"]
+                if isinstance(raw_value, bool):
+                    self._operator_state["simulation_paused"] = raw_value
+                else:
+                    self._operator_state["simulation_paused"] = str(raw_value).strip().lower() in {"1", "true", "yes", "on"}
+            if "directional_only_mode" in payload:
+                raw_value = payload["directional_only_mode"]
+                if isinstance(raw_value, bool):
+                    self._operator_state["directional_only_mode"] = raw_value
+                else:
+                    self._operator_state["directional_only_mode"] = str(raw_value).strip().lower() in {"1", "true", "yes", "on"}
+            if "note" in payload:
+                self._operator_state["note"] = str(payload["note"]).strip()[:220]
+
+            self.analytics.update_zone_center(
+                self._operator_state["zone_center_x"],
+                self._operator_state["zone_center_y"],
+            )
+            return dict(self._operator_state)
 
     def mjpeg_generator(self):
         while True:
@@ -96,9 +162,19 @@ class TrafficProcessor:
         while self._running:
             loop_started = time.perf_counter()
             try:
-                with self._source_lock:
-                    ok, frame = self.source_manager.read()
-                    source_meta = self.source_manager.describe()
+                if self._operator_state["directional_only_mode"] and self._presentation_service is not None:
+                    ok, frame, slot_states = self._presentation_service.composite_frame()
+                    source_meta = {
+                        "source_type": "directional-composite",
+                        "source_value": "north,south,east,west",
+                        "status": "Directional feeds active" if ok else "Waiting for directional feeds",
+                        "last_error": "" if ok else "Add one or more directional feeds to begin analysis.",
+                        "slot_states": slot_states,
+                    }
+                else:
+                    with self._source_lock:
+                        ok, frame = self.source_manager.read()
+                        source_meta = self.source_manager.describe()
 
                 fps = self._record_fps()
                 if not ok or frame is None:
@@ -399,3 +475,33 @@ class TrafficProcessor:
             status="booting",
             warning="Risk: Suggestions may stay in offline mode until the network path is available.",
         )
+
+    def _build_simulation_state(self, snapshot: TrafficSnapshot) -> dict[str, object]:
+        operation_mode = self._operator_state["operation_mode"]
+        selected_operation = self._operator_state["selected_operation"]
+        override_corridor = self._operator_state["override_corridor"]
+        active_corridor = snapshot.recommended_corridor
+
+        manual_priority = self._operator_state["manual_priority_corridor"]
+        if operation_mode == "manual" and override_corridor in {"north", "east", "south", "west"}:
+            active_corridor = override_corridor
+        elif manual_priority in {"north", "east", "south", "west"}:
+            active_corridor = manual_priority
+        elif selected_operation == "pedestrian_pause":
+            active_corridor = "pedestrian_hold"
+        elif selected_operation == "balance_flow" and snapshot.recommended_corridor == "none":
+            active_corridor = "balanced"
+
+        return {
+            "active_corridor": active_corridor,
+            "operation_mode": operation_mode,
+            "selected_operation": selected_operation,
+            "override_corridor": override_corridor,
+            "manual_priority_corridor": manual_priority,
+            "simulation_paused": self._operator_state["simulation_paused"],
+            "directional_only_mode": self._operator_state["directional_only_mode"],
+            "simulation_speed": self._operator_state["simulation_speed"],
+            "note": self._operator_state["note"],
+            "zone_center_x": self._operator_state["zone_center_x"],
+            "zone_center_y": self._operator_state["zone_center_y"],
+        }

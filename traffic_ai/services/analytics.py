@@ -49,6 +49,12 @@ class TrafficAnalyticsEngine:
     def __init__(self, history_limit: int = 180) -> None:
         self.timeline: deque[dict[str, object]] = deque(maxlen=history_limit)
         self._throughput_events: deque[float] = deque()
+        self.zone_center_x_ratio = 0.5
+        self.zone_center_y_ratio = 0.5
+
+    def update_zone_center(self, x_ratio: float, y_ratio: float) -> None:
+        self.zone_center_x_ratio = min(0.8, max(0.2, x_ratio))
+        self.zone_center_y_ratio = min(0.8, max(0.2, y_ratio))
 
     def analyze(
         self,
@@ -220,11 +226,10 @@ class TrafficAnalyticsEngine:
             self._throughput_events.popleft()
         return float(len(self._throughput_events))
 
-    @staticmethod
-    def _resolve_corridor(center: tuple[int, int], width: int, height: int) -> str:
+    def _resolve_corridor(self, center: tuple[int, int], width: int, height: int) -> str:
         x, y = center
-        dx = x - (width / 2.0)
-        dy = y - (height / 2.0)
+        dx = x - (width * self.zone_center_x_ratio)
+        dy = y - (height * self.zone_center_y_ratio)
         if abs(dy) >= abs(dx):
             return "north" if dy < 0 else "south"
         return "west" if dx < 0 else "east"

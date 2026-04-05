@@ -33,7 +33,8 @@ Key additions:
 - `traffic_ai/services/advisors.py`: OpenAI, Ollama, and offline advisory chain
 - `traffic_ai/services/processor.py`: main live processing loop
 - `traffic_ai/web/app.py`: Flask dashboard server and API routes
-- `traffic_ai/web/templates/dashboard.html`: interactive HTML dashboard UI
+- `traffic_ai/web/templates/dashboard.html`: existing lightweight HTML dashboard UI
+- `traffic_ai/web/templates/control_center.html`: new analysis-to-simulation operator site
 - `traffic_ai/web/static/`: dashboard JavaScript and CSS
 - `run_traffic_ai.py`: Python bootstrap launcher
 - `launch_traffic_ai.ps1`: Windows launcher that can install missing software
@@ -80,19 +81,32 @@ python .\run_traffic_ai.py --source-type camera --source-value 0
 
 The bootstrap script installs any missing Python packages from `requirements.txt` before starting Flask.
 
-After launch, open the HTML dashboard in your browser:
+After launch, open either site in your browser:
 
 ```text
+http://127.0.0.1:8501/control-center
 http://127.0.0.1:8501/dashboard
 ```
 
-The dashboard lets you:
+The new control-center site lets you:
 
 - watch the live annotated traffic stream
+- present four separate `North`, `South`, `East`, and `West` feeds at the top of the page
+- assign each direction manually using:
+- camera indexes like `0`, `1`, `2`, `3`
+- uploaded video clips
+- uploaded images
+- local file paths
+- live stream URLs such as RTSP or HTTP camera feeds
+- avoid automatic startup of a default camera feed
+- run analysis only from the four manually assigned directional feeds when `Directional Feeds Only` is enabled
 - switch camera, image, and video sources
 - upload traffic media directly from the browser
 - monitor corridor pressure, congestion, throughput, and mobility
 - view live AI suggestions and offline fallback alerts
+- adjust the corridor split dynamically when the automatic division feels wrong
+- push analysis results into a digital-twin simulation stage without touching the original HTML simulation
+- manually clear directional screens, set directional priority, and pause the digital twin while analysis keeps running
 
 ## OpenAI And Offline Mode
 

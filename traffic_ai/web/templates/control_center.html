@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Traffic Operations Lab</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <main class="shell">
+        <section class="hero panel">
+            <div>
+                <span class="eyebrow">Operations Lab</span>
+                <h1>Live Analysis To Simulation</h1>
+                <p>This new site keeps the original simulation untouched and gives you a cleaner operator workflow: analyze real traffic, tune the sector split dynamically, apply an operation mode, and watch the result in a digital-twin simulation panel.</p>
+            </div>
+            <div class="hero-status">
+                <div class="status-pill">
+                    <span>Advisor</span>
+                    <strong id="advisor-source">Booting</strong>
+                    <small id="advisor-status">Checking online and offline intelligence</small>
+                </div>
+                <div class="status-pill">
+                    <span>Vision</span>
+                    <strong id="vision-backend">Loading</strong>
+                    <small id="vision-note">Waiting for detector startup</small>
+                </div>
+                <div class="status-pill">
+                    <span>Operation</span>
+                    <strong id="operator-mode-badge">Adaptive</strong>
+                    <small id="operator-summary">Follow AI recommendations by default</small>
+                </div>
+                <div class="status-pill">
+                    <span>Feed Mode</span>
+                    <strong id="feed-mode-badge">Directional Only</strong>
+                    <small id="feed-mode-note">Analysis starts only after North, South, East, or West feeds are added</small>
+                </div>
+            </div>
+        </section>
+
+        <section class="control-layout">
+            <div class="main-column">
+                <article class="panel side-card">
+                    <div class="card-head">
+                        <div>
+                            <h2>Four Lane Presentation Wall</h2>
+                            <p>Present four independent camera feeds side by side for each approach while the main system continues combined analysis and simulation.</p>
+                        </div>
+                    </div>
+                    <section class="presentation-grid">
+                        <article class="presentation-tile">
+                            <div class="presentation-head">
+                                <strong id="presentation-title-north">North</strong>
+                                <span id="presentation-status-north">Add feed</span>
+                            </div>
+                            <div class="video-frame small-feed">
+                                <img src="{{ url_for('presentation_feed', slot='north') }}" alt="North feed">
+                            </div>
+                        </article>
+                        <article class="presentation-tile">
+                            <div class="presentation-head">
+                                <strong id="presentation-title-south">South</strong>
+                                <span id="presentation-status-south">Add feed</span>
+                            </div>
+                            <div class="video-frame small-feed">
+                                <img src="{{ url_for('presentation_feed', slot='south') }}" alt="South feed">
+                            </div>
+                        </article>
+                        <article class="presentation-tile">
+                            <div class="presentation-head">
+                                <strong id="presentation-title-east">East</strong>
+                                <span id="presentation-status-east">Add feed</span>
+                            </div>
+                            <div class="video-frame small-feed">
+                                <img src="{{ url_for('presentation_feed', slot='east') }}" alt="East feed">
+                            </div>
+                        </article>
+                        <article class="presentation-tile">
+                            <div class="presentation-head">
+                                <strong id="presentation-title-west">West</strong>
+                                <span id="presentation-status-west">Add feed</span>
+                            </div>
+                            <div class="video-frame small-feed">
+                                <img src="{{ url_for('presentation_feed', slot='west') }}" alt="West feed">
+                            </div>
+                        </article>
+                    </section>
+                </article>
+
+                <section class="stage-grid">
+                    <article class="panel side-card">
+                        <div class="card-head">
+                            <div>
+                                <h2>Digital Twin Simulation</h2>
+                                <p>Analysis results are projected onto a new simulation canvas so you can present the live scene as an operational junction twin.</p>
+                            </div>
+                        </div>
+                        <div class="twin-frame">
+                            <canvas id="twin-canvas" width="640" height="420"></canvas>
+                        </div>
+                        <div class="mini-grid twin-meta">
+                            <div class="metric-chip">
+                                <span>Active Corridor</span>
+                                <strong id="twin-active-corridor">--</strong>
+                            </div>
+                            <div class="metric-chip">
+                                <span>Simulation Speed</span>
+                                <strong id="twin-simulation-speed">1.0x</strong>
+                            </div>
+                            <div class="metric-chip">
+                                <span>Manual Priority</span>
+                                <strong id="twin-manual-priority">None</strong>
+                            </div>
+                            <div class="metric-chip">
+                                <span>Simulation State</span>
+                                <strong id="twin-simulation-state">Running</strong>
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="panel side-card">
+                        <div class="card-head">
+                            <div>
+                                <h2>Combined Analysis Status</h2>
+                                <p id="controller-note">Waiting for directional feeds and analysis.</p>
+                            </div>
+                            <div class="chip-group">
+                                <span class="chip" id="recommended-corridor">Hot corridor: --</span>
+                                <span class="chip accent" id="source-status">Directional mode</span>
+                            </div>
+                        </div>
+                        <div class="mini-grid twin-meta">
+                            <div class="metric-chip">
+                                <span>Advisor</span>
+                                <strong id="analysis-advisor-source">Booting</strong>
+                            </div>
+                            <div class="metric-chip">
+                                <span>Vision</span>
+                                <strong id="analysis-vision-backend">Loading</strong>
+                            </div>
+                            <div class="metric-chip">
+                                <span>Advisor Status</span>
+                                <strong id="analysis-advisor-status">Waiting</strong>
+                            </div>
+                            <div class="metric-chip">
+                                <span>Processing</span>
+                                <strong id="analysis-vision-note">Waiting</strong>
+                            </div>
+                        </div>
+                    </article>
+                </section>
+
+                <section class="metrics-grid">
+                    <article class="metric-card panel-lite">
+                        <div class="metric-label">Live Vehicles</div>
+                        <div id="metric-vehicles" class="metric-value">0</div>
+                        <div class="metric-sub">Current tracked traffic objects</div>
+                    </article>
+                    <article class="metric-card panel-lite">
+                        <div class="metric-label">Congestion</div>
+                        <div id="metric-congestion" class="metric-value">0.0</div>
+                        <div class="metric-sub">Live network stress score</div>
+                    </article>
+                    <article class="metric-card panel-lite">
+                        <div class="metric-label">Mobility</div>
+                        <div id="metric-mobility" class="metric-value">0.0</div>
+                        <div class="metric-sub">Movement quality in the scene</div>
+                    </article>
+                    <article class="metric-card panel-lite">
+                        <div class="metric-label">Throughput / Min</div>
+                        <div id="metric-throughput" class="metric-value">0.0</div>
+                        <div class="metric-sub">Approximate scene exits per minute</div>
+                    </article>
+                    <article class="metric-card panel-lite">
+                        <div class="metric-label">FPS</div>
+                        <div id="metric-fps" class="metric-value">0.0</div>
+                        <div class="metric-sub">Backend analysis speed</div>
+                    </article>
+                    <article class="metric-card panel-lite">
+                        <div class="metric-label">Updated</div>
+                        <div id="metric-updated" class="metric-value">--</div>
+                        <div class="metric-sub">Latest analytics timestamp</div>
+                    </article>
+                </section>
+
+                <article class="panel corridor-card">
+                    <div class="card-head">
+                        <div>
+                            <h2>Dynamic Corridor Split</h2>
+                            <p>The sector center is adjustable now, so if the automatic division feels wrong you can shift the analysis split from the UI.</p>
+                        </div>
+                    </div>
+                    <div class="corridor-grid">
+                        <div class="corridor-item">
+                            <div class="corridor-top"><strong>North</strong><span id="corridor-north-value">0.0</span></div>
+                            <div class="bar"><div id="corridor-north-fill" class="bar-fill north"></div></div>
+                            <div id="corridor-north-meta" class="corridor-meta">No pressure yet</div>
+                        </div>
+                        <div class="corridor-item">
+                            <div class="corridor-top"><strong>East</strong><span id="corridor-east-value">0.0</span></div>
+                            <div class="bar"><div id="corridor-east-fill" class="bar-fill east"></div></div>
+                            <div id="corridor-east-meta" class="corridor-meta">No pressure yet</div>
+                        </div>
+                        <div class="corridor-item">
+                            <div class="corridor-top"><strong>South</strong><span id="corridor-south-value">0.0</span></div>
+                            <div class="bar"><div id="corridor-south-fill" class="bar-fill south"></div></div>
+                            <div id="corridor-south-meta" class="corridor-meta">No pressure yet</div>
+                        </div>
+                        <div class="corridor-item">
+                            <div class="corridor-top"><strong>West</strong><span id="corridor-west-value">0.0</span></div>
+                            <div class="bar"><div id="corridor-west-fill" class="bar-fill west"></div></div>
+                            <div id="corridor-west-meta" class="corridor-meta">No pressure yet</div>
+                        </div>
+                    </div>
+                </article>
+
+                <section class="chart-grid">
+                    <article class="panel-lite chart-card">
+                        <div class="chart-head">
+                            <h3>Vehicle Trend</h3>
+                            <span id="chart-vehicles-stat">Waiting</span>
+                        </div>
+                        <div id="chart-vehicles" class="chart-frame"></div>
+                    </article>
+                    <article class="panel-lite chart-card">
+                        <div class="chart-head">
+                            <h3>Congestion Trend</h3>
+                            <span id="chart-congestion-stat">Waiting</span>
+                        </div>
+                        <div id="chart-congestion" class="chart-frame"></div>
+                    </article>
+                    <article class="panel-lite chart-card">
+                        <div class="chart-head">
+                            <h3>Throughput Trend</h3>
+                            <span id="chart-throughput-stat">Waiting</span>
+                        </div>
+                        <div id="chart-throughput" class="chart-frame"></div>
+                    </article>
+                    <article class="panel-lite chart-card">
+                        <div class="chart-head">
+                            <h3>Mobility Trend</h3>
+                            <span id="chart-mobility-stat">Waiting</span>
+                        </div>
+                        <div id="chart-mobility" class="chart-frame"></div>
+                    </article>
+                </section>
+
+                <section class="insight-grid">
+                    <article class="panel side-card">
+                        <div class="card-head">
+                            <div>
+                                <h2>AI Suggestions</h2>
+                                <p>Live recommendations from OpenAI, local models, or offline rules.</p>
+                            </div>
+                        </div>
+                        <ul id="suggestions-list" class="bullet-list">
+                            <li>Waiting for the first advisory.</li>
+                        </ul>
+                        <div id="suggestion-warning" class="warning-box">Risk information will appear here.</div>
+                    </article>
+
+                    <article class="panel side-card">
+                        <div class="card-head">
+                            <div>
+                                <h2>Alerts And Classes</h2>
+                                <p>Live warnings and detected class mix for the current source.</p>
+                            </div>
+                        </div>
+                        <ul id="alerts-list" class="bullet-list">
+                            <li>No active alerts.</li>
+                        </ul>
+                        <ul id="breakdown-list" class="metric-list split-top">
+                            <li><span>Waiting</span><strong>0</strong></li>
+                        </ul>
+                    </article>
+                </section>
+            </div>
+
+            <aside class="side-column">
+                <article class="panel side-card">
+                    <div class="card-head">
+                        <div>
+                            <h2>Source Input</h2>
+                            <p>Choose a live camera, type a local path, or upload media for combined processing. The four presentation feeds can be assigned separately below.</p>
+                        </div>
+                    </div>
+                    <div class="quick-actions">
+                        <button type="button" class="secondary-button quick-source-button" data-source-type="camera" data-source-value="0">Camera 0</button>
+                        <button type="button" class="secondary-button quick-source-button" data-source-type="camera" data-source-value="1">Camera 1</button>
+                        <button type="button" class="secondary-button" id="refresh-state-button">Refresh State</button>
+                    </div>
+                    <form id="source-form" class="stack split-top">
+                        <label for="source-type">Source Type</label>
+                        <select id="source-type" name="source_type">
+                            <option value="camera" {% if config.source_type == 'camera' %}selected{% endif %}>Camera</option>
+                            <option value="video" {% if config.source_type == 'video' %}selected{% endif %}>Video File</option>
+                            <option value="image" {% if config.source_type == 'image' %}selected{% endif %}>Image File</option>
+                        </select>
+                        <label for="source-input">Source Value</label>
+                        <input id="source-input" name="source_value" type="text" value="{{ config.source_value }}" placeholder="Camera index or absolute path">
+                        <button type="submit" class="primary-button">Apply Source</button>
+                    </form>
+                    <form id="upload-form" class="stack split-top">
+                        <label for="upload-file">Upload Media</label>
+                        <input id="upload-file" name="file" type="file" accept=".jpg,.jpeg,.png,.bmp,.webp,.mp4,.avi,.mov,.mkv,.wmv,.m4v">
+                        <button type="submit" class="secondary-button">Upload And Analyze</button>
+                    </form>
+                    <div id="form-feedback" class="feedback">No changes submitted yet.</div>
+                </article>
+
+                <article class="panel side-card">
+                    <div class="card-head">
+                        <div>
+                            <h2>Lane Feed Assignment</h2>
+                            <p>Set up four independent camera or media sources for better four-lane presentation.</p>
+                        </div>
+                    </div>
+                    <div class="presentation-forms">
+                        <form class="stack presentation-form" data-slot="north">
+                            <strong>North Feed</strong>
+                            <input type="text" name="label" value="North" placeholder="Display label">
+                            <select name="source_type">
+                                <option value="camera">Camera</option>
+                                <option value="video">Video File</option>
+                                <option value="image">Image File</option>
+                                <option value="stream">Live Stream URL</option>
+                            </select>
+                            <input type="text" name="source_value" value="" placeholder="Camera index or path">
+                            <div class="inline-actions">
+                                <button type="submit" class="secondary-button">Apply North</button>
+                                <button type="button" class="ghost-button clear-presentation-button" data-slot="north">Clear</button>
+                            </div>
+                            <input type="file" name="file" accept=".jpg,.jpeg,.png,.bmp,.webp,.mp4,.avi,.mov,.mkv,.wmv,.m4v">
+                            <button type="button" class="ghost-button upload-presentation-button" data-slot="north">Upload To North</button>
+                        </form>
+                        <form class="stack presentation-form" data-slot="south">
+                            <strong>South Feed</strong>
+                            <input type="text" name="label" value="South" placeholder="Display label">
+                            <select name="source_type">
+                                <option value="camera">Camera</option>
+                                <option value="video">Video File</option>
+                                <option value="image">Image File</option>
+                                <option value="stream">Live Stream URL</option>
+                            </select>
+                            <input type="text" name="source_value" value="" placeholder="Camera index or path">
+                            <div class="inline-actions">
+                                <button type="submit" class="secondary-button">Apply South</button>
+                                <button type="button" class="ghost-button clear-presentation-button" data-slot="south">Clear</button>
+                            </div>
+                            <input type="file" name="file" accept=".jpg,.jpeg,.png,.bmp,.webp,.mp4,.avi,.mov,.mkv,.wmv,.m4v">
+                            <button type="button" class="ghost-button upload-presentation-button" data-slot="south">Upload To South</button>
+                        </form>
+                        <form class="stack presentation-form" data-slot="east">
+                            <strong>East Feed</strong>
+                            <input type="text" name="label" value="East" placeholder="Display label">
+                            <select name="source_type">
+                                <option value="camera">Camera</option>
+                                <option value="video">Video File</option>
+                                <option value="image">Image File</option>
+                                <option value="stream">Live Stream URL</option>
+                            </select>
+                            <input type="text" name="source_value" value="" placeholder="Camera index or path">
+                            <div class="inline-actions">
+                                <button type="submit" class="secondary-button">Apply East</button>
+                                <button type="button" class="ghost-button clear-presentation-button" data-slot="east">Clear</button>
+                            </div>
+                            <input type="file" name="file" accept=".jpg,.jpeg,.png,.bmp,.webp,.mp4,.avi,.mov,.mkv,.wmv,.m4v">
+                            <button type="button" class="ghost-button upload-presentation-button" data-slot="east">Upload To East</button>
+                        </form>
+                        <form class="stack presentation-form" data-slot="west">
+                            <strong>West Feed</strong>
+                            <input type="text" name="label" value="West" placeholder="Display label">
+                            <select name="source_type">
+                                <option value="camera">Camera</option>
+                                <option value="video">Video File</option>
+                                <option value="image">Image File</option>
+                                <option value="stream">Live Stream URL</option>
+                            </select>
+                            <input type="text" name="source_value" value="" placeholder="Camera index or path">
+                            <div class="inline-actions">
+                                <button type="submit" class="secondary-button">Apply West</button>
+                                <button type="button" class="ghost-button clear-presentation-button" data-slot="west">Clear</button>
+                            </div>
+                            <input type="file" name="file" accept=".jpg,.jpeg,.png,.bmp,.webp,.mp4,.avi,.mov,.mkv,.wmv,.m4v">
+                            <button type="button" class="ghost-button upload-presentation-button" data-slot="west">Upload To West</button>
+                        </form>
+                    </div>
+                    <div id="presentation-feedback" class="feedback">Lane presentation feeds are ready.</div>
+                </article>
+
+                <article class="panel side-card">
+                    <div class="card-head">
+                        <div>
+                            <h2>Operator Controls</h2>
+                            <p>Adjust the live sector split and choose how the simulation should respond after analysis.</p>
+                        </div>
+                    </div>
+                    <form id="operator-form" class="stack">
+                        <label for="zone-center-x">Horizontal Split</label>
+                        <input id="zone-center-x" type="range" min="0.2" max="0.8" step="0.01" value="0.5">
+                        <div class="slider-value" id="zone-center-x-value">0.50</div>
+
+                        <label for="zone-center-y">Vertical Split</label>
+                        <input id="zone-center-y" type="range" min="0.2" max="0.8" step="0.01" value="0.5">
+                        <div class="slider-value" id="zone-center-y-value">0.50</div>
+
+                        <label for="simulation-speed">Simulation Speed</label>
+                        <input id="simulation-speed" type="range" min="0.5" max="2" step="0.1" value="1">
+                        <div class="slider-value" id="simulation-speed-value">1.0x</div>
+
+                        <div class="toggle-row">
+                            <div class="toggle-copy">
+                                <strong>Pause Digital Twin</strong>
+                                <span>Freeze the simulation while keeping live analysis active.</span>
+                            </div>
+                            <label class="switch">
+                                <input id="simulation-paused" type="checkbox">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="toggle-row">
+                            <div class="toggle-copy">
+                                <strong>Directional Feeds Only</strong>
+                                <span>Use only North, South, East, and West feeds for analysis. No automatic main camera feed is opened.</span>
+                            </div>
+                            <label class="switch">
+                                <input id="directional-only-mode" type="checkbox" checked>
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+
+                        <label for="operation-mode">Operation Mode</label>
+                        <select id="operation-mode">
+                            <option value="adaptive">Adaptive</option>
+                            <option value="manual">Manual</option>
+                        </select>
+
+                        <label for="selected-operation">Action</label>
+                        <select id="selected-operation">
+                            <option value="follow_ai">Follow AI Recommendation</option>
+                            <option value="balance_flow">Balance Flow</option>
+                            <option value="pedestrian_pause">Pedestrian Safe Gap</option>
+                            <option value="manual_override">Manual Corridor Override</option>
+                        </select>
+
+                        <label for="override-corridor">Override Corridor</label>
+                        <select id="override-corridor">
+                            <option value="none">None</option>
+                            <option value="north">North</option>
+                            <option value="east">East</option>
+                            <option value="south">South</option>
+                            <option value="west">West</option>
+                        </select>
+
+                        <label for="manual-priority-corridor">Manual Priority Corridor</label>
+                        <select id="manual-priority-corridor">
+                            <option value="none">None</option>
+                            <option value="north">North</option>
+                            <option value="south">South</option>
+                            <option value="east">East</option>
+                            <option value="west">West</option>
+                        </select>
+
+                        <label for="operator-note">Operator Note</label>
+                        <input id="operator-note" type="text" placeholder="Optional note for the simulation stage">
+
+                        <button type="submit" class="primary-button">Apply Operation</button>
+                    </form>
+                    <div class="quick-actions split-top">
+                        <button type="button" class="secondary-button quick-operation-button" data-operation="follow_ai">Follow AI</button>
+                        <button type="button" class="secondary-button quick-operation-button" data-operation="balance_flow">Balance Flow</button>
+                        <button type="button" class="secondary-button quick-operation-button" data-operation="pedestrian_pause">Pedestrian Gap</button>
+                    </div>
+                    <div class="manual-priority-grid split-top">
+                        <button type="button" class="ghost-button priority-button" data-priority="north">Priority North</button>
+                        <button type="button" class="ghost-button priority-button" data-priority="south">Priority South</button>
+                        <button type="button" class="ghost-button priority-button" data-priority="east">Priority East</button>
+                        <button type="button" class="ghost-button priority-button" data-priority="west">Priority West</button>
+                        <button type="button" class="ghost-button priority-button" data-priority="none">Release Manual Priority</button>
+                    </div>
+                    <div id="operator-feedback" class="feedback">Operator controls are ready.</div>
+                </article>
+            </aside>
+        </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='control_center.js') }}"></script>
+</body>
+</html>

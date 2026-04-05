@@ -1,4 +1,4 @@
-"""Frame source management for cameras, videos, and still images."""
+"""Frame source management for cameras, streams, videos, and still images."""
 
 from __future__ import annotations
 
@@ -40,6 +40,8 @@ class FrameSourceManager:
                 self._open_camera(source_value)
             elif source_type == "video":
                 self._open_video(source_value)
+            elif source_type == "stream":
+                self._open_stream(source_value)
             elif source_type == "image":
                 self._open_image(source_value)
             else:
@@ -118,6 +120,16 @@ class FrameSourceManager:
             raise SourceError(f"Video file could not be opened: {path}")
         self._capture = capture
         self._status = f"Video loaded: {path.name}"
+
+    def _open_stream(self, source_value: str) -> None:
+        if not source_value:
+            raise SourceError("Stream URL is required.")
+        capture = self.cv2.VideoCapture(source_value)
+        if not capture.isOpened():
+            capture.release()
+            raise SourceError(f"Stream could not be opened: {source_value}")
+        self._capture = capture
+        self._status = "Live stream connected"
 
     def _open_image(self, source_value: str) -> None:
         path = Path(source_value)
