@@ -86,10 +86,12 @@
                         <div id="source-value"   class="small text-mutted text-center"         style="font-size:.7rem;">{{ config.source_type }} / {{ config.source_value }}</div>
                     </div>
 
-                    <!-- Source form -->
+                    <!-- Dynamic Source Form -->
                     <div class="section-title"><i class="fa-solid fa-sliders me-2"></i>Switch Source</div>
                     <form id="source-form">
                         <div class="glass-card mb-3">
+
+                            <!-- Type selector -->>
                             <div class="mb-3">
                                 <label for="source-type" class="form-label small mb-1">Source Type</label>
                                 <select id="source-type" name="source_type" class="form-select form-select-sm">
@@ -98,17 +100,67 @@
                                     <option value="image"  {% if config.source_type == 'image'  %}selected{% endif %}>🖼 Image File</option>
                                 </select>
                             </div>
-                            <div class="mb-3">
-                                <label for="source-input" class="form-label small mb-1">Source Value</label>
-                                <input id="source-input" name="source_value" type="text"
+
+                            <!-- CAMERA panel -->
+                            <div id="src-panel-camera" class="src-panel">
+                                <label class="form-label small mb-1">Camera Index</label>
+                                <div class="d-flex gap-2 mb-2">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm flex-fill quick-source-button src-cam-btn"
+                                            data-source-type="camera" data-source-value="0" data-cam="0">
+                                        <i class="fa-solid fa-camera me-1"></i>Cam 0
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm flex-fill quick-source-button src-cam-btn"
+                                            data-source-type="camera" data-source-value="1" data-cam="1">
+                                        <i class="fa-solid fa-camera me-1"></i>Cam 1
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm flex-fill quick-source-button src-cam-btn"
+                                            data-source-type="camera" data-source-value="2" data-cam="2">
+                                        <i class="fa-solid fa-camera me-1"></i>Cam 2
+                                    </button>
+                                </div>
+                                <label class="form-label small mb-1">Or enter index manually</label>
+                                <input id="source-input" name="source_value" type="number" min="0" max="9"
                                        class="form-control form-control-sm"
-                                       value="{{ config.source_value }}"
-                                       placeholder="e.g. 0 or D:\traffic\video.mp4">
-                                <div class="small text-mutted mt-1" style="font-size:.7rem;">Camera: <code>0</code> · File: absolute path</div>
+                                       value="{{ config.source_value if config.source_type == 'camera' else '0' }}"
+                                       placeholder="0">
+                                <div class="small text-mutted mt-1" style="font-size:.7rem;">USB cameras usually start at <code>0</code>.</div>
                             </div>
-                            <button type="submit" class="btn primary-btn w-100">
-                                <i class="fa-solid fa-bolt me-2"></i>Apply Source
-                            </button>
+
+                            <!-- VIDEO FILE panel -->
+                            <div id="src-panel-video" class="src-panel" style="display:none;">
+                                <label class="form-label small mb-1">Video File Path</label>
+                                <div class="input-group input-group-sm mb-2">
+                                    <span class="input-group-text" style="background:rgba(10,11,16,.8);border-color:rgba(255,255,255,.12);color:#94a3b8;">
+                                        <i class="fa-solid fa-film"></i>
+                                    </span>
+                                    <input id="source-input" name="source_value" type="text"
+                                           class="form-control"
+                                           value="{{ config.source_value if config.source_type == 'video' else '' }}"
+                                           placeholder="D:\traffic\junction.mp4">
+                                </div>
+                                <div class="small text-mutted" style="font-size:.7rem;">Supported: <code>.mp4</code> <code>.avi</code> <code>.mov</code> <code>.mkv</code></div>
+                            </div>
+
+                            <!-- IMAGE FILE panel -->
+                            <div id="src-panel-image" class="src-panel" style="display:none;">
+                                <label class="form-label small mb-1">Image File Path</label>
+                                <div class="input-group input-group-sm mb-2">
+                                    <span class="input-group-text" style="background:rgba(10,11,16,.8);border-color:rgba(255,255,255,.12);color:#94a3b8;">
+                                        <i class="fa-solid fa-image"></i>
+                                    </span>
+                                    <input id="source-input" name="source_value" type="text"
+                                           class="form-control"
+                                           value="{{ config.source_value if config.source_type == 'image' else '' }}"
+                                           placeholder="D:\traffic\snapshot.jpg">
+                                </div>
+                                <div class="small text-mutted" style="font-size:.7rem;">Supported: <code>.jpg</code> <code>.png</code> <code>.bmp</code> <code>.webp</code></div>
+                            </div>
+
+                            <div class="mt-3">
+                                <button type="submit" class="btn primary-btn w-100">
+                                    <i class="fa-solid fa-bolt me-2"></i>Apply Source
+                                </button>
+                            </div>
                         </div>
                     </form>
                     <div id="form-feedback" class="small text-mutted mb-3">No changes submitted yet.</div>
@@ -356,7 +408,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
     <script>
-        // Preloader dismiss
+        /* ── Preloader ── */
         window.addEventListener('load', () => {
             setTimeout(() => {
                 const p = document.getElementById('preloader');
@@ -364,27 +416,65 @@
             }, 800);
         });
 
-        // Mirror metric-congestion → congestion-big
-        const observer = new MutationObserver(() => {
-            const v = document.getElementById('metric-congestion');
-            const b = document.getElementById('congestion-big');
-            if (v && b) b.textContent = v.textContent;
-        });
-        const mc = document.getElementById('metric-congestion');
-        if (mc) observer.observe(mc, { childList: true, subtree: true, characterData: true });
+        /* ── Dynamic Source Panel ── */
+        (function () {
+            const PANELS = { camera: 'src-panel-camera', video: 'src-panel-video', image: 'src-panel-image' };
 
-        // Restyle bullet lists rendered by app.js to match glass-card items
-        function styleListItems(listId) {
-            const el = document.getElementById(listId);
-            if (!el) return;
-            new MutationObserver(() => {
-                el.querySelectorAll('li').forEach(li => {
-                    li.style.padding = '0.4rem 0';
-                    li.style.borderBottom = '1px solid rgba(255,255,255,0.06)';
+            function switchPanel(type) {
+                Object.entries(PANELS).forEach(([key, id]) => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    const active = key === type;
+                    el.style.display = active ? 'block' : 'none';
+                    el.style.opacity = active ? '1' : '0';
                 });
-            }).observe(el, { childList: true });
-        }
-        ['suggestions-list','alerts-list','breakdown-list'].forEach(styleListItems);
+                // highlight active camera button
+                document.querySelectorAll('.src-cam-btn').forEach(btn => {
+                    btn.classList.toggle('active-cam-btn', false);
+                });
+            }
+
+            function syncHiddenInput(type) {
+                // app.js always reads #source-input; each panel has its own but
+                // only one is visible — make sure the visible one has the correct id
+                const panels = document.querySelectorAll('.src-panel input[name="source_value"]');
+                panels.forEach(inp => inp.removeAttribute('id'));
+                const activePanel = document.getElementById(PANELS[type]);
+                if (activePanel) {
+                    const activeInput = activePanel.querySelector('input[name="source_value"]');
+                    if (activeInput) activeInput.id = 'source-input';
+                }
+            }
+
+            const sel = document.getElementById('source-type');
+            if (!sel) return;
+
+            sel.addEventListener('change', () => {
+                switchPanel(sel.value);
+                syncHiddenInput(sel.value);
+            });
+
+            // Camera quick-select buttons highlight
+            document.querySelectorAll('.src-cam-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.src-cam-btn').forEach(b => b.classList.remove('active-cam-btn'));
+                    btn.classList.add('active-cam-btn');
+                    const inp = document.getElementById('source-input');
+                    if (inp) inp.value = btn.dataset.sourceValue;
+                });
+            });
+
+            // Init on load
+            const initial = sel.value || 'camera';
+            switchPanel(initial);
+            syncHiddenInput(initial);
+        })();
+
+        /* ── Mirror congestion → big display ── */
+        const mc = document.getElementById('metric-congestion');
+        const cb = document.getElementById('congestion-big');
+        if (mc && cb) new MutationObserver(() => { cb.textContent = mc.textContent; })
+            .observe(mc, { childList: true, subtree: true, characterData: true });
     </script>
     <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>

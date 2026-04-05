@@ -382,3 +382,29 @@ input[type=range]::-webkit-slider-thumb {
 .stagger-1 { animation-delay: .08s; }
 .stagger-2 { animation-delay: .16s; }
 .stagger-3 { animation-delay: .24s; }
+
+/* ── Dynamic source panel transitions ────────────────────────── */
+.src-panel {
+    animation: fadeInUp .22s ease-out both;
+}
+
+/* Active camera button highlight */
+.active-cam-btn {
+    background: rgba(0, 240, 255, 0.15) !important;
+    border-color: var(--accent-neon) !important;
+    color: var(--accent-neon) !important;
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+}
+
+/* input-group text in dark theme */
+.input-group-text {
+    background: rgba(10, 11, 16, .8) !important;
+    border-color: rgba(255, 255, 255, .12) !important;
+    color: #94a3b8 !important;
+}
+
+/* Standard appearance property for range inputs */
+input[type=range] {
+    appearance: none;
+    -webkit-appearance: none;
+}
