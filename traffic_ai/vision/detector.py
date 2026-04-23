@@ -106,7 +106,9 @@ class YoloDetector(BaseDetector):
         self.confidence = confidence
         self.iou = iou
         self.classes_of_interest = {normalize_label(item) for item in classes_of_interest}
-        raw_names = getattr(getattr(self.model, "model", None), "names", {})
+        raw_names = getattr(self.model, "names", None)
+        if raw_names is None:
+            raw_names = getattr(getattr(self.model, "model", None), "names", {})
         if isinstance(raw_names, dict):
             self.class_names = {int(key): str(value) for key, value in raw_names.items()}
         elif isinstance(raw_names, list):

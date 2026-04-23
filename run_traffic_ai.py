@@ -14,15 +14,15 @@ import subprocess
 import sys
 
 
+# Avoid startup failures when stale or locked __pycache__ folders exist in the archive.
+sys.dont_write_bytecode = True
+
 REQUIRED_IMPORTS = {
     "Flask": "flask",
     "numpy": "numpy",
     "requests": "requests",
     "python-dotenv": "dotenv",
-    "Pillow": "PIL",
     "opencv-python": "cv2",
-    "ultralytics": "ultralytics",
-    "openai": "openai",
 }
 
 DETECTION_MODEL_FAMILIES = ("yolo26", "yoloe", "yolo-world", "rtdetr", "yolo-nas", "yolov8")

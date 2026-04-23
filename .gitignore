@@ -1,1 +1,14 @@
 yolo26x.pt
+.venv/
+__pycache__/
+*.pyc
+runtime/
+!runtime/.gitkeep
+*.log
+UnitySimulation/[Ll]ibrary/
+UnitySimulation/[Tt]emp/
+UnitySimulation/[Oo]bj/
+UnitySimulation/[Bb]uild/
+UnitySimulation/[Bb]uilds/
+UnitySimulation/[Ll]ogs/
+UnitySimulation/[Uu]ser[Ss]ettings/

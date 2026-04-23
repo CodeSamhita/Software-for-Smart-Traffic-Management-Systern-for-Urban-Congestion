@@ -7,11 +7,11 @@ from pathlib import Path
 import os
 
 
-def _try_load_dotenv() -> None:
+def _try_load_dotenv(dotenv_path: Path | None = None) -> None:
     try:
         from dotenv import load_dotenv
 
-        load_dotenv()
+        load_dotenv(dotenv_path=dotenv_path)
     except Exception:
         # The bootstrap layer installs dotenv when available, but config loading
         # should still work if it is missing.
@@ -84,7 +84,7 @@ class AppConfig:
 
 def load_config(project_root: Path) -> AppConfig:
     """Load configuration from environment variables and sensible defaults."""
-    _try_load_dotenv()
+    _try_load_dotenv(project_root / ".env")
 
     runtime_dir = project_root / "runtime"
     upload_dir = runtime_dir / "uploads"
@@ -123,12 +123,12 @@ def load_config(project_root: Path) -> AppConfig:
                 "vehicle",
             ),
         ),
-        openai_enabled=_env_bool("OPENAI_ENABLED", True),
+        openai_enabled=_env_bool("OPENAI_ENABLED", False),
         openai_api_key=os.getenv("OPENAI_API_KEY", "").strip(),
         openai_model=os.getenv("OPENAI_MODEL", "gpt-4o-mini").strip() or "gpt-4o-mini",
         openai_timeout_seconds=_env_float("OPENAI_TIMEOUT_SECONDS", 15.0),
         openai_use_image_context=_env_bool("OPENAI_USE_IMAGE_CONTEXT", False),
-        ollama_enabled=_env_bool("OLLAMA_ENABLED", True),
+        ollama_enabled=_env_bool("OLLAMA_ENABLED", False),
         ollama_host=os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434").strip()
         or "http://127.0.0.1:11434",
         ollama_model=os.getenv("OLLAMA_MODEL", "llama3.2").strip() or "llama3.2",

@@ -6,7 +6,7 @@ import base64
 from datetime import datetime, timezone
 import json
 import logging
-from typing import Iterable
+from typing import Any, Iterable
 
 import requests
 
@@ -105,7 +105,7 @@ class OpenAIAdvisor(BaseAdvisor):
             f"{json.dumps(_summary_payload(snapshot), indent=2)}"
         )
 
-        content: list[dict[str, str]] = [{"type": "input_text", "text": prompt}]
+        content: list[dict[str, Any]] = [{"type": "input_text", "text": prompt}]
         if frame is not None and self.use_image_context:
             try:
                 import cv2
@@ -117,6 +117,7 @@ class OpenAIAdvisor(BaseAdvisor):
                         {
                             "type": "input_image",
                             "image_url": f"data:image/jpeg;base64,{payload}",
+                            "detail": "auto",
                         }
                     )
             except Exception:

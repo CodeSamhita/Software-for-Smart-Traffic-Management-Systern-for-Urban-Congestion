@@ -4,6 +4,7 @@ This repository now contains two layers of the capstone system:
 
 1. The original HTML simulation for adaptive junction behavior and analytics.
 2. A new modular Python traffic-vision platform that works with live camera feeds, uploaded images, or uploaded videos and adds AI-generated suggestions with offline fallback.
+3. A Unity-ready C# simulation scaffold for a future high-quality visual traffic platform.
 
 ## What Is New
 
@@ -15,16 +16,20 @@ Key additions:
 - YOLO-based object detection with an OpenCV fallback detector
 - Mixed-traffic scoring tuned for Indian-road style scenes with motorcycles, buses, trucks, pedestrians, and general vehicle density
 - Corridor pressure estimation for north, east, south, and west sectors
-- Live AI suggestions from OpenAI when online
+- Live AI suggestions from OpenAI when online and explicitly enabled
 - Offline fallback suggestions through local rules, with optional Ollama support
 - Modular error handling with `try/except` separation across source loading, detection, analytics, advisory, upload, and bootstrap stages
-- Auto-install flow for missing Python libraries
+- Auto-install flow for required Python libraries
 - Windows PowerShell launcher that can also install Python and optionally FFmpeg on fresh machines
 
 ## Project Structure
 
 - `Simulation/simulation1.html`: original self-contained traffic simulation and dashboard
 - `Simulation/traffic-analytics.html`: original standalone live graph dashboard for timeline analytics
+- `UnitySimulation/`: Unity `2022.3 LTS` scaffold with procedural four-way junction, adaptive signals, and C# vehicle agents
+- `docs/MASTER_DOCUMENT.md`: long-form capstone documentation and archive notes
+- `assets/project_images/`: screenshots and presentation images
+- `archive_legacy/duplicate_project_snapshot/`: archived duplicate project copy kept out of the active runtime path
 - `traffic_ai/config.py`: environment and runtime configuration
 - `traffic_ai/services/source_manager.py`: camera, image, and video ingestion
 - `traffic_ai/vision/detector.py`: YOLO detector plus OpenCV motion fallback
@@ -44,6 +49,12 @@ Key additions:
 Open `Simulation/simulation1.html` in a modern browser.
 
 To view graphs over time, open `Simulation/traffic-analytics.html` in the same browser while the simulation is running. The graph page reads the live analytics feed every second, can load permanently stored sessions from browser storage, and can also import exported JSON logs.
+
+## Running The Unity Prototype
+
+Open `UnitySimulation` in Unity `2022.3 LTS`, create a new empty scene, add an empty GameObject, attach `TrafficSimulationBootstrap`, and press Play.
+
+See `UnitySimulation/README.md` for the current scope and next upgrade steps.
 
 ## Running The Python Traffic AI System
 
@@ -89,7 +100,7 @@ python .\run_traffic_ai.py --vision-model .\yolo26m.pt --show-config
 
 The launcher now profiles CPU, RAM, and GPU capability and auto-picks a detector family and size for the system. Auto mode prioritizes YOLO26, then uses family defaults when local weights are not available, and finally falls back across safe detector candidates before switching to OpenCV motion detection.
 
-The bootstrap script installs any missing Python packages from `requirements.txt` before starting Flask.
+The bootstrap script installs any missing required Python packages from `requirements.txt` before starting Flask. YOLO and cloud AI packages are kept in `requirements-optional-ai.txt` so the archive can run with the OpenCV fallback without forcing heavy downloads.
 
 After launch, open either site in your browser:
 
@@ -122,11 +133,13 @@ The new control-center site lets you:
 
 The AI advisory chain runs in this order:
 
-1. OpenAI
+1. OpenAI if configured
 2. Ollama if configured
 3. Offline rule-based traffic advisor
 
 This means the dashboard keeps working even during internet or API failures. The vision pipeline also stays local after the detector weights are available.
+
+By default, `.env.example` keeps both online advisory providers disabled. This prevents startup delays on machines that do not have an API key or a local Ollama server. Enable only the provider you are actually using.
 
 Create a `.env` file from `.env.example` if you want to set your OpenAI key or adjust models:
 
@@ -144,6 +157,15 @@ Important environment variables:
 - `MODEL_PRIORITY`: optional launch argument for `quality`, `balanced`, or `speed`
 
 Note: SAM, SAM2, SAM3, MobileSAM, and FastSAM are segmentation families and are intentionally not auto-selected for this traffic pipeline because it is optimized for box-based detection and tracking.
+
+## Repaired Archive Runtime Notes
+
+- `requirements.txt` is the minimal runtime: Flask, NumPy, Requests, python-dotenv, and OpenCV.
+- `requirements-optional-ai.txt` adds OpenAI, Ultralytics YOLO, and Pillow for full AI operation.
+- `run_traffic_ai.py` no longer treats OpenAI, Ultralytics, or Pillow as mandatory startup dependencies.
+- Locked or stale `__pycache__` folders should not block launch because the bootstrap disables bytecode writes.
+- Flask now serves the old simulation pages through `/simulation/simulation1.html` and `/simulation/traffic-analytics.html`.
+- The classic HTML dashboard is reachable through `/classic` or `/index`; the main operator screen remains `/control-center`.
 
 ## Notes On Indian Traffic Scenes
 
